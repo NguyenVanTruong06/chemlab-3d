@@ -2,6 +2,7 @@
 
 > **MỤC ĐÍCH FILE NÀY:**
 > Khi đổi tài khoản (do hết quota hoặc chuyển máy), bạn hoặc AI ở phiên mới chỉ cần đọc file này là nắm bắt 100% ngữ cảnh dự án trong vài giây mà không bị đứt gãy tiến độ.
+> **Quy trình kỹ thuật bắt buộc (Nguồn chuẩn):** Tuân thủ nghiêm ngặt [AGENTS.md](./AGENTS.md).
 
 ---
 
