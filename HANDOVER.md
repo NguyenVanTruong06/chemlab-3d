@@ -48,22 +48,24 @@ chemlab-3d/
 │   └── sync_data.py           <-- Script đồng bộ dữ liệu Sheets/CSV sang JSON
 └── src/
     ├── main.tsx
-    ├── App.tsx                <-- App chính (Chế độ Bài học, Sandbox, Góc nhìn 3D, Vòng lặp mô phỏng)
-    ├── App.css                <-- Giao diện Phòng Lab phản hồi Desktop & Mobile
+    ├── App.tsx                <-- App v2.0: Vòng lặp động học 10Hz + Đếm ngược cứu hỏa 25s + Phím tắt Game
+    ├── App.css                <-- Giao diện Fullscreen HUD tối giản (0 thanh bên lấn chiếm màn hình)
     ├── types/
-    │   └── chemistry.ts       <-- Kiểu dữ liệu cho Bình chứa, Hóa chất, Góc nhìn, Bài học
+    │   └── chemistry.ts       <-- Kiểu dữ liệu cho Bình chứa, Trạm tương tác (StationId), Hotbar 6 ô, Sự cố cháy nổ
     ├── data/
     │   ├── chemicals.json     <-- Dữ liệu Hóa chất THCS đồng bộ từ Sheets
     │   ├── reactions.json     <-- Dữ liệu Phản ứng THCS đồng bộ từ Sheets
     │   └── lessons.json       <-- Dữ liệu Bài học Lớp 8 - 9 đồng bộ từ Sheets
     ├── components/
-    │   ├── LabCanvas.tsx      <-- Cầu nối React ↔ Three.js WebGL
-    │   ├── CurriculumPanel.tsx<-- Khung bài học 3 bước (Lý thuyết - Thực hành tự chấm - Kiểm tra)
-    │   └── WorkbenchControls.tsx <-- Bảng thao tác hóa chất, rót cốc, đèn cồn & đo số mol/pH/nhiệt độ
+    │   ├── LabCanvas.tsx      <-- Cầu nối React ↔ Three.js WebGL (Cầm đồ trên tay, Nổ mảnh vỡ, Lửa cháy lan)
+    │   ├── MinimalHud.tsx     <-- HUD tối giản: Nút Balo [B], Thanh Hotbar 6 ô [1..6], Thanh thao tác gọn tại bàn, Báo cháy 25s
+    │   ├── BackpackModal.tsx  <-- Balo & Sổ tay [B]: Yêu cầu bài học, Lý thuyết, Trắc nghiệm, Túi đồ & Nhật ký phản ứng
+    │   └── CabinetModal.tsx   <-- Tủ Hóa Chất [F]: Chọn lọ hóa chất thực tế bỏ vào Balo / Thanh cầm tay
     ├── engine/
-    │   └── ChemistryEngine.ts <-- Bộ máy Hóa học thời gian thực (Mol, C_M, pH, Nhiệt độ, Đổ dư kết tủa tan)
+    │   ├── ChemistryEngine.ts <-- Bộ máy Hóa học & An toàn (H2SO4 đặc 98%, 4 kịch bản nổ vỡ cốc & phát hỏa)
+    │   └── SoundEffects.ts    <-- Bộ tổng hợp âm thanh Web Audio API (Rót chất lỏng, Cốc chạm, Nổ lớn, Còi báo cháy, Xịt CO2)
     └── scene/
-        └── LabScene3D.ts      <-- Không gian Phòng Lab 3D (Đi lại WASD, Kệ thuốc thử, Tủ hút, Bàn Lab, Hạt)
+        └── LabScene3D.ts      <-- Không gian 3D thực tế: Đi tới Tủ/Bồn rửa/Bình cứu hỏa CO2 treo tường, Góc nhìn tay cầm lọ/bình xịt
 ```
 
 ---
@@ -89,12 +91,17 @@ npm run dev
 - [x] **Phiên 1 — Khởi tạo Hệ sinh thái Đám mây:**
   - Xuất bản PRD trên Google Docs & Kho dữ liệu 4 tab trên Google Sheets (`App - Web ( STUDY )`).
   - Khởi tạo GitHub Repo `chemlab-3d`, tích hợp sẵn bộ **87+ Skills** trong `.agents/skills/`.
-- [x] **Giai đoạn 1 & 2 — Căn phòng Lab 3D & Bộ máy Hóa học Thời gian thực (MVP v1.0):**
-  - Dựng hoàn chỉnh căn phòng Lab 3D với Three.js: Tường, Cửa sổ ánh sáng tự nhiên, Bảng tuần hoàn, Nội quy an toàn, Tủ hóa chất 3D (click chọn trực tiếp), Tủ hút khí độc, Bồn rửa, Bàn thí nghiệm trung tâm, 3 bình thủy tinh, Đèn cồn & Kiềng đun.
-  - Hỗ trợ 3 chế độ góc nhìn: **Bàn Lab cận cảnh**, **Đi lại tự do trong phòng (`WASD` + D-pad cảm ứng trên điện thoại)**, và **Toàn cảnh 360°**.
-  - Hoàn thiện `ChemistryEngine.ts` tính toán theo thời gian thực: thể tích (`ml`), số mol (`mol`), nồng độ (`C_M`), độ `pH`, nhiệt độ đun nóng (`°C`), kết tủa lưỡng tính (`AlCl3 + NaOH` dư tan kết tủa), nhiệt phân (`Cu(OH)2 > 80°C -> CuO đen`, `KMnO4 > 200°C -> O2`), và cảnh báo nổ kim loại kiềm `Na`.
-  - Tích hợp 4 Bài học Lớp 8 - 9 tự động chấm từng bước thực hành + câu hỏi trắc nghiệm.
+- [x] **Giai đoạn 1 & 2 — Căn phòng Lab 3D & Bộ máy Hóa học Thời gian thực (MVP v1.0).**
+- [x] **Nâng cấp v2.0 — Tối giản Giao diện & Nhập vai Thực tế + Cháy nổ & Cứu hỏa 25 Giây:**
+  - **Loại bỏ hoàn toàn 2 thanh Sidebar hai bên** để giải phóng toàn bộ không gian 3D. Thay bằng nút **`🎒 Balo / Yêu cầu [B]`**, thanh **Hotbar 6 ô cầm tay `[1]..[6]`**, và thanh thao tác ngữ cảnh siêu gọn chỉ hiện khi đứng trước Bàn Thí Nghiệm.
+  - **Tương tác không gian vật lý thực tế:** Đi bộ (`WASD` / D-pad cảm ứng / Đi nhanh tới trạm) ra **Tủ Hóa Chất `[F]`** lấy lọ dung dịch cầm trên tay, ra **Bồn Rửa `[F]/[R]`** lấy `H2O` hoặc rửa/thay cốc vỡ, ra **Tường Phải `[F]`** giật chốt **Bình Chữa Cháy `CO2`**.
+  - **4 Kịch bản Sai Quy Tắc Gây Nổ Vỡ Cốc & Hỏa Hoạn 25 Giây:**
+    1. Đổ nước (`H2O`) trực tiếp vào `H2SO4` đặc 98% (`ACID_DILUTION_BLAST`) — đối chiếu với quy tắc chuẩn rót từ từ axit đặc vào nước an toàn.
+    2. Thả mẩu lớn Natri kim loại (`>= 0.5g`) vào nước hoặc thả `Na` vào axit mạnh (`SODIUM_BLAST`).
+    3. Bật đèn cồn ngay dưới bình đang sủi mạnh khí `H2` (`HYDROGEN_FIRE`).
+    4. Đun cạn khô bình thủy tinh rỗng vượt `255°C` (`OVERHEAT_RUPTURE`).
+  - **Cơ chế Cứu Hỏa Khẩn Cấp 25 Giây + Âm thanh Web Audio:** Khi nổ bốc cháy bàn thí nghiệm, còi báo động hú vang + đèn chớp đỏ trần nhà. Học sinh có **25.0 giây** để chạy tới tường phải lấy Bình `CO2`, chạy lại gần bàn (`<= 3.3m`) và giữ `SPACE` / nút Xịt để phun tuyết lạnh `CO2` dập lửa trước khi phòng Lab cháy rụi!
 - [ ] **Bước tiếp theo (Giai đoạn 3):**
-  1. Bổ sung âm thanh sống động (tiếng rót nước, tiếng sủi bọt khí `H2`/`CO2`, tiếng sôi, cảnh báo an toàn) bằng Web Audio API.
-  2. Mở rộng danh mục hóa chất & bài học Lớp 8 - 9 từ Google Sheets của bạn Sư phạm (thêm muối Sắt `FeCl2`/`FeCl3`, `AgNO3`, dẫn ống khí sục `CO2` vào nước vôi trong `Ca(OH)2`).
-  3. Triển khai tự động (Auto-deploy) lên GitHub Pages / Vercel để gửi link trực tiếp cho học sinh dùng thử.
+  1. Mở rộng thêm dụng cụ nâng cao (Ống dẫn khí sục `CO2` làm đục nước vôi trong `Ca(OH)2`, Kẹp sắt đốt dây `Fe` trong bình khí `O2`, Giấy quỳ tím cầm tay nhúng trực tiếp).
+  2. Mở rộng danh mục hóa chất & bài học Lớp 8 - 9 từ Google Sheets của bạn Sư phạm (`FeCl2`, `FeCl3`, `AgNO3`, nhận biết mất nhãn).
+  3. Cấu hình GitHub Actions tự động deploy bản Web lên GitHub Pages / Vercel để chia sẻ link chạy ngay trên điện thoại và máy tính cho học sinh thử nghiệm.

@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { CameraMode, VesselState } from '../types/chemistry';
+import type { CameraMode, HotbarItem, StationId, VesselState } from '../types/chemistry';
 import { SHELF_CHEMICALS } from '../engine/ChemistryEngine';
 
 interface VesselMeshGroup {
   id: string;
   root: THREE.Group;
-  glassMesh: THREE.Mesh;
+  intactGroup: THREE.Group;
+  brokenGroup: THREE.Group;
   liquidMesh: THREE.Mesh;
   meniscusMesh: THREE.Mesh;
   precipitateMesh: THREE.Mesh;
@@ -14,24 +15,37 @@ interface VesselMeshGroup {
   selectionRing: THREE.Mesh;
   labelSprite: THREE.Sprite;
   basePosition: THREE.Vector3;
-   bubbles: THREE.Mesh[];
+  bubbles: THREE.Mesh[];
   steamPuffs: THREE.Mesh[];
   sparks: THREE.Mesh[];
 }
 
 interface PourAnimation {
   active: boolean;
-  progress: number; // 0..1
+  progress: number;
   targetIndex: number;
-  sourceIndex: number | null; // null means pouring from a reagent bottle
+  sourceIndex: number | null;
   colorHex: string;
+}
+
+interface AutoWalkTarget {
+  pos: THREE.Vector3;
+  yaw: number;
+  station: StationId;
 }
 
 export interface LabSceneCallbacks {
   onSelectVessel: (vesselId: string) => void;
-  onSelectReagentFrom3D: (formula: string) => void;
-  onNearWorkbenchChange: (isNear: boolean) => void;
+  onStationProximityChange: (station: StationId, distanceToFire: number) => void;
+  onInteractStation3D: (station: StationId, reagentFormula?: string) => void;
 }
+
+const STATION_WAYPOINTS: Record<Exclude<StationId, null>, { pos: [number, number, number]; yaw: number }> = {
+  WORKBENCH: { pos: [0, 1.65, 2.05], yaw: 0 },
+  REAGENT_CABINET: { pos: [-3.35, 1.65, -2.25], yaw: 0 },
+  SINK: { pos: [3.65, 1.65, 1.2], yaw: -Math.PI / 2 },
+  EXTINGUISHER_MOUNT: { pos: [3.85, 1.65, -2.0], yaw: -Math.PI / 2 },
+};
 
 export class LabScene3D {
   private container: HTMLElement;
@@ -44,15 +58,37 @@ export class LabScene3D {
   private callbacks: LabSceneCallbacks;
 
   private vesselGroups: VesselMeshGroup[] = [];
-  private clickableMeshes: Map<THREE.Object3D, { type: 'vessel' | 'reagent'; id: string }> =
-    new Map();
+  private clickableMeshes: Map<
+    THREE.Object3D,
+    { type: 'vessel' | 'station' | 'reagent'; id: string; station?: StationId }
+  > = new Map();
 
-  // Bunsen burner visuals
+  // Bunsen burner
   private flameOuter!: THREE.Mesh;
   private flameCore!: THREE.Mesh;
   private burnerLight!: THREE.PointLight;
 
-  // Pouring bottle & stream visuals
+  // Wall Fire Extinguisher & First-Person Held Props
+  private wallExtinguisherCylinder!: THREE.Group;
+  private extinguisherBeaconLight!: THREE.PointLight;
+  private handGroup!: THREE.Group;
+  private handBottleGroup!: THREE.Group;
+  private handBottleMat!: THREE.MeshPhysicalMaterial;
+  private handExtinguisherGroup!: THREE.Group;
+  private sprayParticles: THREE.Mesh[] = [];
+  private isSpraying = false;
+
+  // Workbench Fire & Explosion FX
+  private fireGroup!: THREE.Group;
+  private fireTongues: THREE.Mesh[] = [];
+  private smokeBillows: THREE.Mesh[] = [];
+  private emergencyStrobeLight!: THREE.PointLight;
+  private explosionDebris: THREE.Mesh[] = [];
+  private explosionActiveTime = 0;
+  private fireIntensity = 0; // 0..100
+  private cameraShake = 0;
+
+  // Pouring props
   private pourBottleGroup!: THREE.Group;
   private pourBottleBodyMat!: THREE.MeshPhysicalMaterial;
   private pourStreamMesh!: THREE.Mesh;
@@ -65,21 +101,23 @@ export class LabScene3D {
     colorHex: '#38bdf8',
   };
 
-  // Camera & Spatial Walk State
-  private cameraMode: CameraMode = 'WORKBENCH_FOCUS';
+  // Spatial Walk & Camera State
+  private cameraMode: CameraMode = 'ROOM_WALK';
   private isTransitioningCamera = false;
   private camTransitionTargetPos = new THREE.Vector3();
   private camTransitionLookAt = new THREE.Vector3();
 
-  private playerPos = new THREE.Vector3(0, 1.65, 3.35);
-  private playerYaw = 0; // radians, 0 = looking toward -Z (towards workbench)
-  private playerPitch = -0.12;
+  private playerPos = new THREE.Vector3(0, 1.65, 2.55);
+  private playerYaw = 0;
+  private playerPitch = -0.14;
+  private autoWalkTarget: AutoWalkTarget | null = null;
   private keysPressed: Set<string> = new Set();
   private mobileMove = { forward: 0, strafe: 0 };
   private isDraggingLook = false;
   private prevPointer = { x: 0, y: 0 };
   private pointerDownPos = { x: 0, y: 0 };
-  private wasNearBench = true;
+  private lastStation: StationId = 'WORKBENCH';
+  private lastReportedFireDist = -1;
 
   private selectedVesselId = 'vessel-1';
   private animFrameId = 0;
@@ -91,13 +129,14 @@ export class LabScene3D {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#dce7f2');
-    this.scene.fog = new THREE.Fog('#dce7f2', 12, 26);
+    this.scene.fog = new THREE.Fog('#dce7f2', 11, 25);
 
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
 
-    this.camera = new THREE.PerspectiveCamera(50, width / height, 0.08, 50);
-    this.camera.position.set(0, 1.62, 2.05);
+    this.camera = new THREE.PerspectiveCamera(56, width / height, 0.06, 50);
+    this.camera.position.copy(this.playerPos);
+    this.scene.add(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(width, height);
@@ -105,25 +144,27 @@ export class LabScene3D {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMappingExposure = 1.06;
     container.appendChild(this.renderer.domElement);
 
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbit.enableDamping = true;
     this.orbit.dampingFactor = 0.08;
     this.orbit.target.set(0, 1.08, 0);
-    this.orbit.minDistance = 0.9;
-    this.orbit.maxDistance = 9.5;
+    this.orbit.minDistance = 0.85;
+    this.orbit.maxDistance = 9.0;
     this.orbit.maxPolarAngle = Math.PI / 2 - 0.04;
 
     this.setupLights();
     this.buildRoomArchitecture();
-    this.buildLabFurniture();
+    this.buildLabFurnitureAndStations();
     this.buildWorkbenchAndVessels();
+    this.buildFireAndExplosionSystems();
+    this.buildFirstPersonHandProps();
     this.buildPouringProps();
     this.attachEvents();
 
-    this.setCameraMode('WORKBENCH_FOCUS');
+    this.setCameraMode('ROOM_WALK');
     this.animate();
   }
 
@@ -132,26 +173,34 @@ export class LabScene3D {
     hemi.position.set(0, 4.2, 0);
     this.scene.add(hemi);
 
-    const sunLight = new THREE.DirectionalLight('#fffbeb', 1.35);
+    const sunLight = new THREE.DirectionalLight('#fffbeb', 1.3);
     sunLight.position.set(-5.5, 5.5, 3.5);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.set(2048, 2048);
     sunLight.shadow.camera.near = 0.5;
     sunLight.shadow.camera.far = 20;
-    sunLight.shadow.camera.left = -6;
-    sunLight.shadow.camera.right = 6;
-    sunLight.shadow.camera.top = 6;
-    sunLight.shadow.camera.bottom = -6;
+    sunLight.shadow.camera.left = -6.5;
+    sunLight.shadow.camera.right = 6.5;
+    sunLight.shadow.camera.top = 6.5;
+    sunLight.shadow.camera.bottom = -6.5;
     sunLight.shadow.bias = -0.0005;
     this.scene.add(sunLight);
 
-    const benchSpot = new THREE.PointLight('#f0f9ff', 0.9, 8);
+    const benchSpot = new THREE.PointLight('#f0f9ff', 0.85, 8);
     benchSpot.position.set(0, 3.4, 0.6);
     this.scene.add(benchSpot);
 
     this.burnerLight = new THREE.PointLight('#38bdf8', 0, 2.4);
     this.burnerLight.position.set(0.68, 1.12, 0);
     this.scene.add(this.burnerLight);
+
+    this.emergencyStrobeLight = new THREE.PointLight('#ef4444', 0, 16);
+    this.emergencyStrobeLight.position.set(0, 3.8, 0);
+    this.scene.add(this.emergencyStrobeLight);
+
+    this.extinguisherBeaconLight = new THREE.PointLight('#ef4444', 0, 4.5);
+    this.extinguisherBeaconLight.position.set(5.1, 2.1, -2.0);
+    this.scene.add(this.extinguisherBeaconLight);
   }
 
   private createTileFloorTexture(): THREE.CanvasTexture {
@@ -162,7 +211,6 @@ export class LabScene3D {
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(0, 0, 256, 256);
 
-    // Subtle two-tone ceramic tiles
     ctx.fillStyle = '#edf2f7';
     ctx.fillRect(4, 4, 120, 120);
     ctx.fillRect(132, 132, 120, 120);
@@ -170,7 +218,6 @@ export class LabScene3D {
     ctx.fillRect(132, 4, 120, 120);
     ctx.fillRect(4, 132, 120, 120);
 
-    // Grout lines
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 3;
     ctx.strokeRect(1.5, 1.5, 253, 253);
@@ -188,7 +235,11 @@ export class LabScene3D {
     return tex;
   }
 
-  private createPosterTexture(title: string, subtitle: string, type: 'periodic' | 'safety'): THREE.CanvasTexture {
+  private createPosterTexture(
+    title: string,
+    subtitle: string,
+    type: 'periodic' | 'safety'
+  ): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 400;
@@ -196,23 +247,27 @@ export class LabScene3D {
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, 640, 400);
-    ctx.strokeStyle = '#0284c7';
+    ctx.strokeStyle = type === 'periodic' ? '#0284c7' : '#dc2626';
     ctx.lineWidth = 10;
     ctx.strokeRect(5, 5, 630, 390);
 
-    ctx.fillStyle = type === 'periodic' ? '#0369a1' : '#0f766e';
+    ctx.fillStyle = type === 'periodic' ? '#0369a1' : '#b91c1c';
     ctx.fillRect(10, 10, 620, 64);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px sans-serif';
-    ctx.fillText(title, 26, 46);
-    ctx.font = '15px sans-serif';
-    ctx.fillStyle = '#e0f2fe';
-    ctx.fillText(subtitle, 26, 66);
+    ctx.font = 'bold 23px sans-serif';
+    ctx.fillText(title, 24, 45);
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#fef2f2';
+    ctx.fillText(subtitle, 24, 65);
 
     if (type === 'periodic') {
       const cols = ['#ef4444', '#f59e0b', '#0ea5e9', '#10b981', '#eab308', '#14b8a6'];
-      const symbols = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Fe', 'Cu', 'Zn', 'Ag', 'Ba', 'Au'];
+      const symbols = [
+        'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+        'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
+        'Fe', 'Cu', 'Zn', 'Ag', 'Ba', 'Au',
+      ];
       let idx = 0;
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 11; c++) {
@@ -233,17 +288,16 @@ export class LabScene3D {
       }
     } else {
       const rules = [
-        '1. Đọc kỹ nhãn hóa chất và nồng độ mol trước khi pha chế.',
-        '2. Không đổ nước trực tiếp vào axit đặc; rót từ từ axit vào nước.',
-        '3. Khi đun nóng trên đèn cồn, hướng miệng bình ra phía không có người.',
-        '4. Chỉ lấy lượng rất nhỏ kim loại kiềm (Na < 0.2g) khi thử với nước.',
-        '5. Quan sát kỹ màu sắc chất chỉ thị, kết tủa và bọt khí sinh ra.',
+        '1. CẤM rót nước vào H₂SO₄ đặc 98% (Gây nổ bắn axit!).',
+        '2. CẤM thả mẩu lớn Natri (≥ 0.5g) vào nước/axit.',
+        '3. CẤM bật đèn cồn dưới bình đang thoát nhiều khí H₂.',
+        '4. CẤM đun bình rỗng cạn khô vượt 255°C.',
+        '5. KHI CHÁY: Chạy ngay tới Tường Phải lấy Bình CO₂ xịt lửa!',
       ];
-      ctx.fillStyle = '#1e293b';
       ctx.font = 'bold 18px sans-serif';
       rules.forEach((line, i) => {
-        ctx.fillStyle = i === 3 ? '#dc2626' : '#1e293b';
-        ctx.fillText(line, 28, 125 + i * 52);
+        ctx.fillStyle = i === 4 ? '#b91c1c' : '#1e293b';
+        ctx.fillText(line, 24, 122 + i * 54);
       });
     }
 
@@ -252,48 +306,52 @@ export class LabScene3D {
     return tex;
   }
 
-  private createTextSprite(text: string, bgHex = '#0f172a', textHex = '#f8fafc'): THREE.Sprite {
+  private createTextSprite(
+    text: string,
+    bgHex = '#0f172a',
+    borderHex = '#38bdf8',
+    scaleW = 0.65
+  ): THREE.Sprite {
     const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 76;
+    canvas.width = 420;
+    canvas.height = 84;
     const ctx = canvas.getContext('2d')!;
 
     ctx.fillStyle = bgHex;
     ctx.beginPath();
-    ctx.roundRect(8, 8, 304, 60, 14);
+    ctx.roundRect(8, 8, 404, 68, 16);
     ctx.fill();
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = borderHex;
+    ctx.lineWidth = 4;
     ctx.stroke();
 
-    ctx.fillStyle = textHex;
-    ctx.font = 'bold 24px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 23px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 160, 38);
+    ctx.fillText(text, 210, 42);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(0.62, 0.15, 1);
+    sprite.scale.set(scaleW, scaleW * 0.2, 1);
     return sprite;
   }
 
   private buildRoomArchitecture(): void {
-    // Floor (12m x 10m)
-    const floorGeo = new THREE.PlaneGeometry(12, 10);
-    const floorMat = new THREE.MeshStandardMaterial({
-      map: this.createTileFloorTexture(),
-      roughness: 0.45,
-      metalness: 0.05,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(12, 10),
+      new THREE.MeshStandardMaterial({
+        map: this.createTileFloorTexture(),
+        roughness: 0.45,
+        metalness: 0.05,
+      })
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    // Ceiling
     const ceilMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(12, 10),
       new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.9 })
@@ -302,7 +360,6 @@ export class LabScene3D {
     ceilMesh.position.y = 4.2;
     this.scene.add(ceilMesh);
 
-    // Ceiling LED light panels
     const ledMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
     [-2.5, 2.5].forEach((x) => {
       [-1.8, 1.8].forEach((z) => {
@@ -315,7 +372,6 @@ export class LabScene3D {
     const wallUpperMat = new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.85 });
     const wainscotMat = new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.65 });
 
-    // Back wall (-Z = -4.6)
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(12, 4.2, 0.2), wallUpperMat);
     backWall.position.set(0, 2.1, -4.6);
     backWall.receiveShadow = true;
@@ -325,12 +381,10 @@ export class LabScene3D {
     backWainscot.position.set(0, 0.575, -4.6);
     this.scene.add(backWainscot);
 
-    // Front wall (+Z = 5.0)
     const frontWall = new THREE.Mesh(new THREE.BoxGeometry(12, 4.2, 0.2), wallUpperMat);
     frontWall.position.set(0, 2.1, 5.0);
     this.scene.add(frontWall);
 
-    // Left wall (-X = -5.8) with sunlit windows
     const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4.2, 10), wallUpperMat);
     leftWall.position.set(-5.8, 2.1, 0);
     this.scene.add(leftWall);
@@ -351,12 +405,10 @@ export class LabScene3D {
       this.scene.add(glass);
     });
 
-    // Right wall (+X = 5.8)
     const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4.2, 10), wallUpperMat);
     rightWall.position.set(5.8, 2.1, 0);
     this.scene.add(rightWall);
 
-    // Periodic Table Poster on Back Wall
     const periodicPoster = new THREE.Mesh(
       new THREE.PlaneGeometry(2.5, 1.55),
       new THREE.MeshBasicMaterial({
@@ -370,71 +422,78 @@ export class LabScene3D {
     periodicPoster.position.set(0, 2.55, -4.48);
     this.scene.add(periodicPoster);
 
-    // Safety Rules Poster on Right Wall
     const safetyPoster = new THREE.Mesh(
       new THREE.PlaneGeometry(2.2, 1.4),
       new THREE.MeshBasicMaterial({
         map: this.createPosterTexture(
-          'NỘI QUY AN TOÀN PHÒNG THÍ NGHIỆM',
-          'Học đi đôi với Hành — Thao tác chuẩn xác & an toàn',
+          'CẢNH BÁO CHÁY NỔ & AN TOÀN LAB',
+          'Đọc kỹ trước khi lấy H₂SO₄ đặc hoặc Kim loại kiềm Na!',
           'safety'
         ),
       })
     );
     safetyPoster.rotation.y = -Math.PI / 2;
-    safetyPoster.position.set(5.68, 2.45, -1.2);
+    safetyPoster.position.set(5.68, 2.55, 1.2);
     this.scene.add(safetyPoster);
   }
 
-  private buildLabFurniture(): void {
+  private buildLabFurnitureAndStations(): void {
     const woodMat = new THREE.MeshStandardMaterial({ color: '#d97706', roughness: 0.65 });
     const cabinetMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.5 });
-    const darkTopMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.35, metalness: 0.1 });
-    const steelMat = new THREE.MeshStandardMaterial({ color: '#94a3b8', roughness: 0.3, metalness: 0.7 });
+    const darkTopMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.35 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: '#94a3b8', roughness: 0.3, metalness: 0.75 });
 
-    // 1. Reagent Cabinet against Back-Left Wall (-3.4, 0, -4.0)
+    // STATION 1: REAGENT CABINET (-3.4, 0, -4.05)
     const shelfGroup = new THREE.Group();
     shelfGroup.position.set(-3.4, 0, -4.05);
 
-    const shelfBack = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.4, 0.08), cabinetMat);
-    shelfBack.position.set(0, 1.2, -0.2);
+    const shelfBack = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.45, 0.1), cabinetMat);
+    shelfBack.position.set(0, 1.22, -0.2);
     shelfBack.castShadow = true;
     shelfGroup.add(shelfBack);
+    this.clickableMeshes.set(shelfBack, {
+      type: 'station',
+      id: 'REAGENT_CABINET',
+      station: 'REAGENT_CABINET',
+    });
 
-    [-1.16, 1.16].forEach((sx) => {
-      const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 0.48), cabinetMat);
-      side.position.set(sx, 1.2, 0);
+    [-1.2, 1.2].forEach((sx) => {
+      const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.45, 0.48), cabinetMat);
+      side.position.set(sx, 1.22, 0);
       shelfGroup.add(side);
     });
 
-    [0.1, 0.85, 1.45, 2.05, 2.4].forEach((sy) => {
-      const plank = new THREE.Mesh(new THREE.BoxGeometry(2.36, 0.05, 0.46), woodMat);
+    [0.1, 0.85, 1.45, 2.05, 2.45].forEach((sy) => {
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(2.44, 0.05, 0.46), woodMat);
       plank.position.set(0, sy, 0);
       plank.receiveShadow = true;
       shelfGroup.add(plank);
     });
 
-    const shelfBanner = this.createTextSprite('TỦ HÓA CHẤT THCS (Click để chọn)', '#0369a1');
-    shelfBanner.position.set(0, 2.62, 0.1);
-    shelfBanner.scale.set(1.35, 0.3, 1);
+    const shelfBanner = this.createTextSprite(
+      '🧪 TỦ HÓA CHẤT [Đi tới / Phím F]',
+      '#0369a1',
+      '#38bdf8',
+      1.45
+    );
+    shelfBanner.position.set(0, 2.68, 0.15);
     shelfGroup.add(shelfBanner);
 
-    // Populate 3D Reagent Bottles on the cabinet shelves!
     SHELF_CHEMICALS.forEach((chem, idx) => {
       const row = Math.floor(idx / 5);
       const col = idx % 5;
-      const bx = -0.88 + col * 0.44;
+      const bx = -0.9 + col * 0.45;
       const by = 2.08 - row * 0.6;
 
       const bottleGroup = new THREE.Group();
-      bottleGroup.position.set(bx, by, 0.05);
+      bottleGroup.position.set(bx, by, 0.06);
 
       const bottleMat = new THREE.MeshPhysicalMaterial({
         color: chem.colorHex,
         transparent: true,
-        opacity: Math.max(0.55, chem.opacity),
+        opacity: Math.max(0.58, chem.opacity),
         roughness: 0.15,
-        transmission: 0.35,
+        transmission: 0.3,
       });
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.22, 16), bottleMat);
       body.position.y = 0.11;
@@ -451,50 +510,98 @@ export class LabScene3D {
       cap.position.y = 0.24;
       bottleGroup.add(cap);
 
-      this.clickableMeshes.set(body, { type: 'reagent', id: chem.formula });
+      this.clickableMeshes.set(body, {
+        type: 'reagent',
+        id: chem.formula,
+        station: 'REAGENT_CABINET',
+      });
       shelfGroup.add(bottleGroup);
     });
-
     this.scene.add(shelfGroup);
 
-    // 2. Fume Hood (Tủ Hút Khí Độc) at Back-Right (3.4, 0, -3.9)
-    const hoodGroup = new THREE.Group();
-    hoodGroup.position.set(3.4, 0, -3.95);
-    const hoodBase = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.9, 0.95), cabinetMat);
-    hoodBase.position.y = 0.45;
-    hoodBase.castShadow = true;
-    hoodGroup.add(hoodBase);
+    // STATION 2: WALL-MOUNTED RED CO2 FIRE EXTINGUISHER (Right Wall: 5.55, 0, -2.0)
+    const fireStation = new THREE.Group();
+    fireStation.position.set(5.58, 0, -2.0);
 
-    const hoodChamber = new THREE.Mesh(
-      new THREE.BoxGeometry(2.1, 1.5, 0.9),
-      new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.4 })
+    // Bright Red Safety Backboard on Wall
+    const redBoard = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 1.25, 0.78),
+      new THREE.MeshStandardMaterial({ color: '#dc2626', roughness: 0.4 })
     );
-    hoodChamber.position.set(0, 1.65, -0.02);
-    hoodGroup.add(hoodChamber);
+    redBoard.position.set(0.08, 1.35, 0);
+    fireStation.add(redBoard);
 
-    const sashGlass = new THREE.Mesh(
-      new THREE.BoxGeometry(1.9, 0.95, 0.03),
-      new THREE.MeshPhysicalMaterial({
-        color: '#bae6fd',
-        transparent: true,
-        opacity: 0.32,
-        roughness: 0.1,
-      })
+    const whiteBorder = new THREE.Mesh(
+      new THREE.BoxGeometry(0.07, 1.12, 0.66),
+      new THREE.MeshStandardMaterial({ color: '#fef2f2', roughness: 0.5 })
     );
-    sashGlass.position.set(0, 1.55, 0.44);
-    hoodGroup.add(sashGlass);
+    whiteBorder.position.set(0.07, 1.35, 0);
+    fireStation.add(whiteBorder);
 
-    const duct = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.8, 16), steelMat);
-    duct.position.set(0, 3.3, -0.1);
-    hoodGroup.add(duct);
+    // Bracket Hook
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.22), steelMat);
+    bracket.position.set(-0.02, 1.38, 0);
+    fireStation.add(bracket);
 
-    const hoodLabel = this.createTextSprite('TỦ HÚT KHÍ ĐỘC', '#0f766e');
-    hoodLabel.position.set(0, 2.58, 0.48);
-    hoodLabel.scale.set(0.95, 0.22, 1);
-    hoodGroup.add(hoodLabel);
-    this.scene.add(hoodGroup);
+    // Removable 3D Red CO2 Extinguisher Cylinder!
+    this.wallExtinguisherCylinder = new THREE.Group();
+    this.wallExtinguisherCylinder.position.set(-0.08, 1.22, 0);
 
-    // 3. Emergency Wash & Sink Station on Right Wall (5.1, 0, 1.2)
+    const extTank = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.11, 0.56, 20),
+      new THREE.MeshStandardMaterial({ color: '#dc2626', roughness: 0.25, metalness: 0.25 })
+    );
+    extTank.castShadow = true;
+    this.wallExtinguisherCylinder.add(extTank);
+
+    const extDome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.11, 18, 12),
+      new THREE.MeshStandardMaterial({ color: '#b91c1c', roughness: 0.25, metalness: 0.25 })
+    );
+    extDome.position.y = 0.28;
+    this.wallExtinguisherCylinder.add(extDome);
+
+    const valve = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.035, 0.1, 12),
+      new THREE.MeshStandardMaterial({ color: '#eab308', metalness: 0.8, roughness: 0.2 })
+    );
+    valve.position.y = 0.41;
+    this.wallExtinguisherCylinder.add(valve);
+
+    const horn = new THREE.Mesh(
+      new THREE.ConeGeometry(0.055, 0.24, 14),
+      new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5 })
+    );
+    horn.position.set(-0.08, 0.22, 0.08);
+    horn.rotation.z = Math.PI / 4;
+    this.wallExtinguisherCylinder.add(horn);
+
+    fireStation.add(this.wallExtinguisherCylinder);
+
+    // Hitbox for clicking Fire Extinguisher Station
+    const extHit = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 1.5, 0.9),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    extHit.position.set(-0.1, 1.35, 0);
+    fireStation.add(extHit);
+    this.clickableMeshes.set(extHit, {
+      type: 'station',
+      id: 'EXTINGUISHER_MOUNT',
+      station: 'EXTINGUISHER_MOUNT',
+    });
+
+    const fireLabel = this.createTextSprite(
+      '🚒 BÌNH CỨU HỎA CO₂ [Click / Phím F]',
+      '#991b1b',
+      '#fca5a5',
+      1.45
+    );
+    fireLabel.position.set(-0.2, 2.22, 0);
+    fireStation.add(fireLabel);
+    this.scene.add(fireStation);
+
+    // STATION 3: SINK & EMERGENCY WASH STATION (Right Wall: 5.15, 0, 1.2)
     const sinkGroup = new THREE.Group();
     sinkGroup.position.set(5.15, 0, 1.2);
     const sinkCabinet = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 1.5), cabinetMat);
@@ -506,28 +613,58 @@ export class LabScene3D {
     sinkCounter.position.y = 0.93;
     sinkGroup.add(sinkCounter);
 
-    const faucet = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.022, 10, 20, Math.PI), steelMat);
-    faucet.position.set(0.1, 1.12, 0);
+    const waterBasin = new THREE.Mesh(
+      new THREE.BoxGeometry(0.62, 0.03, 0.95),
+      new THREE.MeshStandardMaterial({ color: '#38bdf8', roughness: 0.15 })
+    );
+    waterBasin.position.y = 0.955;
+    sinkGroup.add(waterBasin);
+
+    const faucet = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.024, 10, 20, Math.PI), steelMat);
+    faucet.position.set(0.12, 1.14, 0);
     faucet.rotation.y = Math.PI / 2;
     sinkGroup.add(faucet);
+
+    const sinkLabel = this.createTextSprite(
+      '🚰 BỒN RỬA & LẤY NƯỚC [Phím F]',
+      '#0f766e',
+      '#5eead4',
+      1.3
+    );
+    sinkLabel.position.set(-0.15, 1.68, 0);
+    sinkGroup.add(sinkLabel);
+
+    const sinkHit = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 1.5, 1.65),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    sinkHit.position.y = 0.75;
+    sinkGroup.add(sinkHit);
+    this.clickableMeshes.set(sinkHit, { type: 'station', id: 'SINK', station: 'SINK' });
     this.scene.add(sinkGroup);
 
-    // 4. Two Secondary Student Lab Tables in the room for realistic classroom depth
-    [-3.1, 3.1].forEach((tx) => {
-      const sideBench = new THREE.Group();
-      sideBench.position.set(tx, 0, 1.8);
-      const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.07, 1.0), darkTopMat);
-      top.position.y = 0.88;
-      top.castShadow = true;
-      top.receiveShadow = true;
-      sideBench.add(top);
-
-      const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.84, 0.82), woodMat);
-      base.position.y = 0.42;
-      base.castShadow = true;
-      sideBench.add(base);
-      this.scene.add(sideBench);
-    });
+    // Fume Hood at Back-Right (3.2, 0, -4.0)
+    const hoodGroup = new THREE.Group();
+    hoodGroup.position.set(3.2, 0, -4.0);
+    const hoodBase = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.9, 0.9), cabinetMat);
+    hoodBase.position.y = 0.45;
+    hoodGroup.add(hoodBase);
+    const hoodChamber = new THREE.Mesh(
+      new THREE.BoxGeometry(2.0, 1.45, 0.86),
+      new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.4 })
+    );
+    hoodChamber.position.set(0, 1.62, -0.02);
+    hoodGroup.add(hoodChamber);
+    const sashGlass = new THREE.Mesh(
+      new THREE.BoxGeometry(1.82, 0.9, 0.03),
+      new THREE.MeshPhysicalMaterial({ color: '#bae6fd', transparent: true, opacity: 0.3 })
+    );
+    sashGlass.position.set(0, 1.52, 0.42);
+    hoodGroup.add(sashGlass);
+    const duct = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.8, 16), steelMat);
+    duct.position.set(0, 3.25, -0.1);
+    hoodGroup.add(duct);
+    this.scene.add(hoodGroup);
   }
 
   private buildWorkbenchAndVessels(): void {
@@ -536,28 +673,25 @@ export class LabScene3D {
       roughness: 0.32,
       metalness: 0.12,
     });
-    const benchBodyMat = new THREE.MeshStandardMaterial({
-      color: '#f8fafc',
-      roughness: 0.5,
-    });
-    const woodTrimMat = new THREE.MeshStandardMaterial({
-      color: '#d97706',
-      roughness: 0.55,
-    });
+    const benchBodyMat = new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.5 });
+    const woodTrimMat = new THREE.MeshStandardMaterial({ color: '#d97706', roughness: 0.55 });
     const steelMat = new THREE.MeshStandardMaterial({
       color: '#94a3b8',
       roughness: 0.28,
       metalness: 0.78,
     });
 
-    // Main Central Workbench at (0, 0, 0)
     const benchGroup = new THREE.Group();
-
     const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 1.25), darkTopMat);
     counterTop.position.set(0, 0.92, 0);
     counterTop.castShadow = true;
     counterTop.receiveShadow = true;
     benchGroup.add(counterTop);
+    this.clickableMeshes.set(counterTop, {
+      type: 'station',
+      id: 'WORKBENCH',
+      station: 'WORKBENCH',
+    });
 
     const cabinet = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.88, 1.08), benchBodyMat);
     cabinet.position.set(0, 0.44, 0);
@@ -569,16 +703,14 @@ export class LabScene3D {
     trim.position.set(0, 0.85, 0);
     benchGroup.add(trim);
 
-    // Tray mat on the workbench
     const tray = new THREE.Mesh(
       new THREE.BoxGeometry(1.95, 0.015, 0.72),
       new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.6 })
     );
     tray.position.set(0, 0.968, 0);
-    tray.receiveShadow = true;
     benchGroup.add(tray);
 
-    // Bunsen Burner + Tripod under Vessel 3 (x = +0.68)
+    // Bunsen Burner + Tripod at x = +0.68
     const burnerX = 0.68;
     const burnerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.03, 24), steelMat);
     burnerBase.position.set(burnerX, 0.99, 0);
@@ -588,7 +720,6 @@ export class LabScene3D {
     burnerTube.position.set(burnerX, 1.06, 0);
     benchGroup.add(burnerTube);
 
-    // Tripod Ring + 3 Legs
     const tripodRing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.012, 12, 32), steelMat);
     tripodRing.rotation.x = Math.PI / 2;
     tripodRing.position.set(burnerX, 1.21, 0);
@@ -604,15 +735,10 @@ export class LabScene3D {
     for (let i = 0; i < 3; i++) {
       const angle = (i * Math.PI * 2) / 3 + 0.4;
       const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.25, 10), steelMat);
-      leg.position.set(
-        burnerX + Math.cos(angle) * 0.145,
-        1.09,
-        Math.sin(angle) * 0.145
-      );
+      leg.position.set(burnerX + Math.cos(angle) * 0.145, 1.09, Math.sin(angle) * 0.145);
       benchGroup.add(leg);
     }
 
-    // Dynamic Bunsen Flame
     this.flameOuter = new THREE.Mesh(
       new THREE.ConeGeometry(0.048, 0.14, 20),
       new THREE.MeshBasicMaterial({ color: '#0ea5e9', transparent: true, opacity: 0.72 })
@@ -631,11 +757,10 @@ export class LabScene3D {
 
     this.scene.add(benchGroup);
 
-    // Build the 3 Interactive Glass Vessels
     const vesselConfigs = [
-      { id: 'vessel-1', label: 'Cốc A (250ml)', x: -0.68, y: 0.98, radius: 0.135, height: 0.32 },
-      { id: 'vessel-2', label: 'Cốc B (250ml)', x: 0.0, y: 0.98, radius: 0.135, height: 0.32 },
-      { id: 'vessel-3', label: 'Bình Nhiệt C (Đèn cồn)', x: 0.68, y: 1.225, radius: 0.125, height: 0.3 },
+      { id: 'vessel-1', label: 'Cốc A', x: -0.68, y: 0.98, radius: 0.135, height: 0.32 },
+      { id: 'vessel-2', label: 'Cốc B', x: 0.0, y: 0.98, radius: 0.135, height: 0.32 },
+      { id: 'vessel-3', label: 'Bình Nhiệt C', x: 0.68, y: 1.225, radius: 0.125, height: 0.3 },
     ];
 
     vesselConfigs.forEach((cfg) => {
@@ -643,73 +768,82 @@ export class LabScene3D {
       const basePos = new THREE.Vector3(cfg.x, cfg.y, 0);
       root.position.copy(basePos);
 
-      // Outer Borosilicate Glass Cylinder (open top)
-      const glassGeo = new THREE.CylinderGeometry(cfg.radius, cfg.radius, cfg.height, 36, 1, true);
+      // Intact Glass Group
+      const intactGroup = new THREE.Group();
       const glassMat = new THREE.MeshPhysicalMaterial({
         color: '#f8fafc',
         transparent: true,
         opacity: 0.28,
         roughness: 0.06,
-        metalness: 0.05,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.05,
         side: THREE.DoubleSide,
         depthWrite: false,
       });
-      const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+      const glassMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(cfg.radius, cfg.radius, cfg.height, 36, 1, true),
+        glassMat
+      );
       glassMesh.position.y = cfg.height / 2;
-      root.add(glassMesh);
+      intactGroup.add(glassMesh);
 
-      // Glass bottom disc & lip rim
       const glassBottom = new THREE.Mesh(
         new THREE.CylinderGeometry(cfg.radius, cfg.radius, 0.012, 32),
         glassMat
       );
       glassBottom.position.y = 0.006;
-      root.add(glassBottom);
+      intactGroup.add(glassBottom);
 
       const glassRim = new THREE.Mesh(
         new THREE.TorusGeometry(cfg.radius, 0.007, 10, 36),
-        new THREE.MeshPhysicalMaterial({
-          color: '#e2e8f0',
-          transparent: true,
-          opacity: 0.55,
-          roughness: 0.1,
-        })
+        new THREE.MeshPhysicalMaterial({ color: '#e2e8f0', transparent: true, opacity: 0.55 })
       );
       glassRim.rotation.x = Math.PI / 2;
       glassRim.position.y = cfg.height;
-      root.add(glassRim);
+      intactGroup.add(glassRim);
+      root.add(intactGroup);
 
-      // Graduation tick lines on the front of the beaker
-      for (let t = 1; t <= 4; t++) {
-        const tick = new THREE.Mesh(
-          new THREE.BoxGeometry(0.045, 0.004, 0.004),
-          new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })
-        );
-        tick.position.set(0, (cfg.height * t) / 5, cfg.radius + 0.002);
-        root.add(tick);
-      }
-
-      // Inner Liquid Cylinder
-      const liquidGeo = new THREE.CylinderGeometry(
-        cfg.radius * 0.93,
-        cfg.radius * 0.93,
-        1.0,
-        32
+      // Broken / Shattered Glass & Scorch Soot Group!
+      const brokenGroup = new THREE.Group();
+      brokenGroup.visible = false;
+      const scorchDisc = new THREE.Mesh(
+        new THREE.CircleGeometry(cfg.radius * 1.45, 24),
+        new THREE.MeshBasicMaterial({ color: '#18181b', side: THREE.DoubleSide })
       );
-      const liquidMat = new THREE.MeshPhysicalMaterial({
-        color: '#dbeafe',
+      scorchDisc.rotation.x = -Math.PI / 2;
+      scorchDisc.position.y = 0.004;
+      brokenGroup.add(scorchDisc);
+
+      const shardMat = new THREE.MeshPhysicalMaterial({
+        color: '#cbd5e1',
         transparent: true,
-        opacity: 0.3,
-        roughness: 0.12,
-        clearcoat: 0.6,
+        opacity: 0.7,
+        roughness: 0.15,
       });
-      const liquidMesh = new THREE.Mesh(liquidGeo, liquidMat);
+      for (let s = 0; s < 9; s++) {
+        const ang = (s / 9) * Math.PI * 2;
+        const shard = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.09, 4), shardMat);
+        shard.position.set(
+          Math.cos(ang) * (cfg.radius * 0.85),
+          0.035,
+          Math.sin(ang) * (cfg.radius * 0.85)
+        );
+        shard.rotation.set((Math.random() - 0.5) * 0.8, ang, (Math.random() - 0.5) * 0.8);
+        brokenGroup.add(shard);
+      }
+      root.add(brokenGroup);
+
+      const liquidMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(cfg.radius * 0.93, cfg.radius * 0.93, 1.0, 32),
+        new THREE.MeshPhysicalMaterial({
+          color: '#dbeafe',
+          transparent: true,
+          opacity: 0.3,
+          roughness: 0.12,
+        })
+      );
       liquidMesh.visible = false;
       root.add(liquidMesh);
 
-      // Liquid Meniscus Top
       const meniscusMesh = new THREE.Mesh(
         new THREE.CircleGeometry(cfg.radius * 0.93, 32),
         new THREE.MeshBasicMaterial({
@@ -723,69 +857,54 @@ export class LabScene3D {
       meniscusMesh.visible = false;
       root.add(meniscusMesh);
 
-      // Settled Precipitate Layer at Bottom
       const precipitateMesh = new THREE.Mesh(
         new THREE.CylinderGeometry(cfg.radius * 0.91, cfg.radius * 0.91, 1.0, 28),
-        new THREE.MeshStandardMaterial({
-          color: '#ffffff',
-          roughness: 0.85,
-          transparent: true,
-          opacity: 0.95,
-        })
+        new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85 })
       );
       precipitateMesh.visible = false;
       root.add(precipitateMesh);
 
-      // Solid Reactant Chunk (Al, Na, CaCO3, KMnO4)
       const solidMesh = new THREE.Mesh(
         new THREE.DodecahedronGeometry(0.036, 1),
-        new THREE.MeshStandardMaterial({
-          color: '#cbd5e1',
-          roughness: 0.35,
-          metalness: 0.45,
-        })
+        new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.35, metalness: 0.45 })
       );
       solidMesh.position.set(0, 0.035, 0);
       solidMesh.visible = false;
       root.add(solidMesh);
 
-      // Active Selection Ring around Base
       const selectionRing = new THREE.Mesh(
         new THREE.RingGeometry(cfg.radius + 0.022, cfg.radius + 0.048, 36),
         new THREE.MeshBasicMaterial({
           color: '#0ea5e9',
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.9,
+          opacity: 0.92,
         })
       );
       selectionRing.rotation.x = -Math.PI / 2;
-      selectionRing.position.y = 0.003;
+      selectionRing.position.y = 0.005;
       selectionRing.visible = cfg.id === this.selectedVesselId;
       root.add(selectionRing);
 
-      // Floating Label Sprite
-      const labelSprite = this.createTextSprite(cfg.label);
-      labelSprite.position.set(0, cfg.height + 0.13, 0);
+      const labelSprite = this.createTextSprite(cfg.label, '#0f172a', '#38bdf8', 0.5);
+      labelSprite.position.set(0, cfg.height + 0.12, 0);
       root.add(labelSprite);
 
-      // Hitbox for easy clicking/tapping on desktop & mobile
       const hitBox = new THREE.Mesh(
-        new THREE.CylinderGeometry(cfg.radius * 1.35, cfg.radius * 1.35, cfg.height * 1.25, 16),
+        new THREE.CylinderGeometry(cfg.radius * 1.4, cfg.radius * 1.4, cfg.height * 1.3, 16),
         new THREE.MeshBasicMaterial({ visible: false })
       );
       hitBox.position.y = cfg.height / 2;
       root.add(hitBox);
-      this.clickableMeshes.set(hitBox, { type: 'vessel', id: cfg.id });
+      this.clickableMeshes.set(hitBox, { type: 'vessel', id: cfg.id, station: 'WORKBENCH' });
 
-      // Pre-allocate gas bubbles, steam puffs, and alkali sparks
       const bubbles: THREE.Mesh[] = [];
       const bubbleMat = new THREE.MeshBasicMaterial({
         color: '#ffffff',
         transparent: true,
         opacity: 0.75,
       });
-      for (let b = 0; b < 22; b++) {
+      for (let b = 0; b < 20; b++) {
         const bm = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 8), bubbleMat);
         bm.visible = false;
         bm.userData = {
@@ -799,31 +918,25 @@ export class LabScene3D {
       }
 
       const steamPuffs: THREE.Mesh[] = [];
-      for (let s = 0; s < 10; s++) {
+      for (let s = 0; s < 8; s++) {
         const sm = new THREE.Mesh(
           new THREE.SphereGeometry(0.028, 10, 10),
           new THREE.MeshBasicMaterial({ color: '#f1f5f9', transparent: true, opacity: 0.25 })
         );
         sm.visible = false;
-        sm.userData = {
-          phase: s / 10,
-          driftX: (Math.random() - 0.5) * 0.08,
-        };
+        sm.userData = { phase: s / 8, driftX: (Math.random() - 0.5) * 0.08 };
         root.add(sm);
         steamPuffs.push(sm);
       }
 
       const sparks: THREE.Mesh[] = [];
-      for (let k = 0; k < 14; k++) {
+      for (let k = 0; k < 12; k++) {
         const sp = new THREE.Mesh(
           new THREE.SphereGeometry(0.01, 6, 6),
           new THREE.MeshBasicMaterial({ color: '#f59e0b' })
         );
         sp.visible = false;
-        sp.userData = {
-          angle: (k / 14) * Math.PI * 2,
-          phase: Math.random(),
-        };
+        sp.userData = { angle: (k / 12) * Math.PI * 2, phase: Math.random() };
         root.add(sp);
         sparks.push(sp);
       }
@@ -832,7 +945,8 @@ export class LabScene3D {
       this.vesselGroups.push({
         id: cfg.id,
         root,
-        glassMesh,
+        intactGroup,
+        brokenGroup,
         liquidMesh,
         meniscusMesh,
         precipitateMesh,
@@ -845,6 +959,128 @@ export class LabScene3D {
         sparks,
       });
     });
+  }
+
+  private buildFireAndExplosionSystems(): void {
+    this.fireGroup = new THREE.Group();
+    this.fireGroup.position.set(0, 0.98, 0);
+    this.fireGroup.visible = false;
+
+    for (let i = 0; i < 16; i++) {
+      const isCore = i % 2 === 0;
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(isCore ? 0.09 : 0.15, isCore ? 0.36 : 0.56, 12),
+        new THREE.MeshBasicMaterial({
+          color: isCore ? '#fde047' : '#ea580c',
+          transparent: true,
+          opacity: isCore ? 0.92 : 0.78,
+        })
+      );
+      cone.userData = {
+        ox: (Math.random() - 0.5) * 1.85,
+        oz: (Math.random() - 0.5) * 0.75,
+        phase: Math.random() * Math.PI * 2,
+        speed: 9 + Math.random() * 8,
+      };
+      cone.position.set(cone.userData.ox, 0.22, cone.userData.oz);
+      this.fireGroup.add(cone);
+      this.fireTongues.push(cone);
+    }
+
+    for (let s = 0; s < 16; s++) {
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(0.14, 10, 10),
+        new THREE.MeshBasicMaterial({ color: '#27272a', transparent: true, opacity: 0.45 })
+      );
+      puff.userData = {
+        ox: (Math.random() - 0.5) * 1.5,
+        oz: (Math.random() - 0.5) * 0.6,
+        phase: s / 16,
+      };
+      this.fireGroup.add(puff);
+      this.smokeBillows.push(puff);
+    }
+    this.scene.add(this.fireGroup);
+
+    // Explosion Shards & Fireball Burst Pool
+    for (let d = 0; d < 26; d++) {
+      const isEmber = d % 2 === 0;
+      const mesh = new THREE.Mesh(
+        isEmber ? new THREE.SphereGeometry(0.032, 8, 8) : new THREE.TetrahedronGeometry(0.045),
+        new THREE.MeshBasicMaterial({ color: isEmber ? '#f97316' : '#e2e8f0' })
+      );
+      mesh.visible = false;
+      mesh.userData = { vx: 0, vy: 0, vz: 0 };
+      this.scene.add(mesh);
+      this.explosionDebris.push(mesh);
+    }
+  }
+
+  private buildFirstPersonHandProps(): void {
+    this.handGroup = new THREE.Group();
+    this.camera.add(this.handGroup);
+
+    // 1. Held Reagent Bottle in right hand
+    this.handBottleGroup = new THREE.Group();
+    this.handBottleGroup.position.set(0.28, -0.24, -0.48);
+    this.handBottleGroup.rotation.set(0.12, -0.25, 0.08);
+    this.handBottleMat = new THREE.MeshPhysicalMaterial({
+      color: '#dbeafe',
+      transparent: true,
+      opacity: 0.72,
+      roughness: 0.15,
+    });
+    const bBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.05, 0.14, 18),
+      this.handBottleMat
+    );
+    this.handBottleGroup.add(bBody);
+    const bCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.035, 14),
+      new THREE.MeshStandardMaterial({ color: '#0f172a' })
+    );
+    bCap.position.y = 0.085;
+    this.handBottleGroup.add(bCap);
+    this.handGroup.add(this.handBottleGroup);
+
+    // 2. Held Red CO2 Fire Extinguisher + Spray Particles!
+    this.handExtinguisherGroup = new THREE.Group();
+    this.handExtinguisherGroup.position.set(0.3, -0.28, -0.52);
+    this.handExtinguisherGroup.rotation.set(0.18, -0.2, 0);
+    this.handExtinguisherGroup.visible = false;
+
+    const tank = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.068, 0.068, 0.34, 18),
+      new THREE.MeshStandardMaterial({ color: '#dc2626', roughness: 0.25, metalness: 0.3 })
+    );
+    this.handExtinguisherGroup.add(tank);
+
+    const nozzle = new THREE.Mesh(
+      new THREE.ConeGeometry(0.042, 0.18, 14),
+      new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.5 })
+    );
+    nozzle.position.set(-0.04, 0.14, -0.14);
+    nozzle.rotation.x = -Math.PI / 2.3;
+    this.handExtinguisherGroup.add(nozzle);
+    this.handGroup.add(this.handExtinguisherGroup);
+
+    // CO2 White Frost Spray Stream attached to camera view
+    const frostMat = new THREE.MeshBasicMaterial({
+      color: '#f8fafc',
+      transparent: true,
+      opacity: 0.72,
+    });
+    for (let i = 0; i < 34; i++) {
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), frostMat);
+      p.visible = false;
+      p.userData = {
+        phase: i / 34,
+        spreadX: (Math.random() - 0.5) * 0.45,
+        spreadY: (Math.random() - 0.5) * 0.35,
+      };
+      this.camera.add(p);
+      this.sprayParticles.push(p);
+    }
   }
 
   private buildPouringProps(): void {
@@ -860,7 +1096,6 @@ export class LabScene3D {
       this.pourBottleBodyMat
     );
     this.pourBottleGroup.add(body);
-
     const neck = new THREE.Mesh(
       new THREE.CylinderGeometry(0.022, 0.032, 0.06, 16),
       this.pourBottleBodyMat
@@ -881,6 +1116,78 @@ export class LabScene3D {
     );
     this.pourStreamMesh.visible = false;
     this.scene.add(this.pourStreamMesh);
+  }
+
+  public walkToStation(station: Exclude<StationId, null>): void {
+    const wp = STATION_WAYPOINTS[station];
+    if (!wp) return;
+    if (this.cameraMode !== 'ROOM_WALK') {
+      this.setCameraMode('ROOM_WALK');
+    }
+    this.autoWalkTarget = {
+      pos: new THREE.Vector3(wp.pos[0], wp.pos[1], wp.pos[2]),
+      yaw: wp.yaw,
+      station,
+    };
+  }
+
+  public triggerExplosion(vesselId: string): void {
+    const vg = this.vesselGroups.find((v) => v.id === vesselId) || this.vesselGroups[0];
+    const origin = vg.basePosition;
+    this.explosionActiveTime = 1.3;
+    this.cameraShake = 0.42;
+
+    this.explosionDebris.forEach((mesh) => {
+      mesh.visible = true;
+      mesh.position.set(origin.x, origin.y + 0.16, origin.z);
+      const angle = Math.random() * Math.PI * 2;
+      const spd = 1.4 + Math.random() * 3.2;
+      mesh.userData.vx = Math.cos(angle) * spd;
+      mesh.userData.vy = 1.8 + Math.random() * 3.0;
+      mesh.userData.vz = Math.sin(angle) * spd;
+    });
+  }
+
+  public syncFireEmergency(intensity: number, burnedDown: boolean): void {
+    this.fireIntensity = intensity;
+    this.fireGroup.visible = intensity > 0.5 || burnedDown;
+    if (burnedDown) {
+      this.scene.background = new THREE.Color('#271717');
+      this.scene.fog = new THREE.Fog('#271717', 4, 16);
+    } else if (intensity > 0.5) {
+      this.scene.background = new THREE.Color('#cbd5e1');
+      this.scene.fog = new THREE.Fog('#94a3b8', 6, 20);
+    } else {
+      this.scene.background = new THREE.Color('#dce7f2');
+      this.scene.fog = new THREE.Fog('#dce7f2', 11, 25);
+    }
+  }
+
+  public syncHeldItem(
+    activeItem: HotbarItem,
+    ownsExtinguisher: boolean,
+    spraying: boolean
+  ): void {
+    this.wallExtinguisherCylinder.visible = !ownsExtinguisher;
+    this.isSpraying = spraying && activeItem?.type === 'extinguisher';
+
+    const showHand = this.cameraMode === 'ROOM_WALK';
+    this.handGroup.visible = showHand;
+
+    if (activeItem?.type === 'extinguisher') {
+      this.handExtinguisherGroup.visible = true;
+      this.handBottleGroup.visible = false;
+    } else if (activeItem?.type === 'reagent') {
+      this.handExtinguisherGroup.visible = false;
+      this.handBottleGroup.visible = true;
+      const chem = SHELF_CHEMICALS.find((c) => c.formula === activeItem.formula);
+      if (chem) {
+        this.handBottleMat.color.set(chem.colorHex);
+      }
+    } else {
+      this.handExtinguisherGroup.visible = false;
+      this.handBottleGroup.visible = false;
+    }
   }
 
   public triggerPourAnimation(
@@ -914,24 +1221,29 @@ export class LabScene3D {
     this.cameraMode = mode;
     if (mode === 'WORKBENCH_FOCUS') {
       this.orbit.enabled = true;
-      this.camTransitionTargetPos.set(0, 1.56, 1.92);
+      this.camTransitionTargetPos.set(0, 1.54, 1.85);
       this.camTransitionLookAt.set(0, 1.12, 0);
       this.isTransitioningCamera = true;
+      this.handGroup.visible = false;
     } else if (mode === 'ORBIT_OVERVIEW') {
       this.orbit.enabled = true;
-      this.camTransitionTargetPos.set(4.1, 3.25, 4.35);
-      this.camTransitionLookAt.set(0, 1.1, -0.6);
+      this.camTransitionTargetPos.set(4.2, 3.3, 4.4);
+      this.camTransitionLookAt.set(0, 1.1, -0.5);
       this.isTransitioningCamera = true;
+      this.handGroup.visible = false;
     } else {
-      // ROOM_WALK Spatial Mode
       this.orbit.enabled = false;
       this.isTransitioningCamera = false;
       this.camera.position.copy(this.playerPos);
       this.updateWalkCameraRotation();
+      this.handGroup.visible = true;
     }
   }
 
   public setMobileMove(forward: number, strafe: number): void {
+    if (Math.abs(forward) > 0 || Math.abs(strafe) > 0) {
+      this.autoWalkTarget = null;
+    }
     this.mobileMove = { forward, strafe };
   }
 
@@ -948,8 +1260,10 @@ export class LabScene3D {
       const maxH = vState.id === 'vessel-3' ? 0.27 : 0.29;
       const vis = vState.visual;
 
-      // Update Liquid Cylinder & Meniscus
-      if (vis.fillRatio > 0.008) {
+      vg.intactGroup.visible = !vis.isBroken;
+      vg.brokenGroup.visible = vis.isBroken;
+
+      if (!vis.isBroken && vis.fillRatio > 0.008) {
         const liqH = Math.max(0.018, vis.fillRatio * maxH);
         vg.liquidMesh.visible = true;
         vg.liquidMesh.scale.set(1, liqH, 1);
@@ -966,8 +1280,7 @@ export class LabScene3D {
         vg.meniscusMesh.visible = false;
       }
 
-      // Update Precipitate Layer
-      if (vis.precipitateHeightRatio > 0.002) {
+      if (!vis.isBroken && vis.precipitateHeightRatio > 0.002) {
         const pptH = vis.precipitateHeightRatio * maxH;
         vg.precipitateMesh.visible = true;
         vg.precipitateMesh.scale.set(1, pptH, 1);
@@ -979,20 +1292,14 @@ export class LabScene3D {
         vg.precipitateMesh.visible = false;
       }
 
-      // Update Solid Reactant Chunk
-      if (vis.solidChunkColorHex && vis.solidChunkScale > 0.02) {
+      if (!vis.isBroken && vis.solidChunkColorHex && vis.solidChunkScale > 0.02) {
         vg.solidMesh.visible = true;
         vg.solidMesh.scale.setScalar(vis.solidChunkScale);
         (vg.solidMesh.material as THREE.MeshStandardMaterial).color.set(vis.solidChunkColorHex);
-        // Sodium floats & skitters on the liquid surface!
         if (vis.isSparking && vis.fillRatio > 0.02) {
           const surfaceY = 0.012 + vis.fillRatio * maxH;
           const t = performance.now() * 0.012;
-          vg.solidMesh.position.set(
-            Math.sin(t) * 0.055,
-            surfaceY,
-            Math.cos(t * 1.3) * 0.055
-          );
+          vg.solidMesh.position.set(Math.sin(t) * 0.055, surfaceY, Math.cos(t * 1.3) * 0.055);
         } else {
           vg.solidMesh.position.set(0, 0.032, 0);
         }
@@ -1000,11 +1307,11 @@ export class LabScene3D {
         vg.solidMesh.visible = false;
       }
 
-      // Bunsen Burner Flame for heatable vessel
       if (vState.isHeatable) {
-        this.flameOuter.visible = vState.burnerOn;
-        this.flameCore.visible = vState.burnerOn;
-        this.burnerLight.intensity = vState.burnerOn ? 0.6 + vState.burnerLevel * 0.45 : 0;
+        this.flameOuter.visible = vState.burnerOn && !vis.isBroken;
+        this.flameCore.visible = vState.burnerOn && !vis.isBroken;
+        this.burnerLight.intensity =
+          vState.burnerOn && !vis.isBroken ? 0.6 + vState.burnerLevel * 0.45 : 0;
         const fScale = 0.75 + vState.burnerLevel * 0.25;
         this.flameOuter.scale.set(fScale, fScale, fScale);
         this.flameCore.scale.set(fScale, fScale, fScale);
@@ -1041,6 +1348,9 @@ export class LabScene3D {
   private handleKeyDown = (e: KeyboardEvent): void => {
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      this.autoWalkTarget = null;
+    }
     this.keysPressed.add(e.code);
   };
 
@@ -1062,10 +1372,7 @@ export class LabScene3D {
       const dy = e.clientY - this.prevPointer.y;
       this.prevPointer = { x: e.clientX, y: e.clientY };
       this.playerYaw -= dx * 0.0042;
-      this.playerPitch = Math.max(
-        -1.15,
-        Math.min(1.05, this.playerPitch - dy * 0.0038)
-      );
+      this.playerPitch = Math.max(-1.15, Math.min(1.05, this.playerPitch - dy * 0.0038));
       this.updateWalkCameraRotation();
     }
   };
@@ -1076,18 +1383,9 @@ export class LabScene3D {
       e.clientX - this.pointerDownPos.x,
       e.clientY - this.pointerDownPos.y
     );
-    if (distMoved > 6) return; // Was a camera drag, not a click
+    if (distMoved > 7) return;
 
     const rect = this.renderer.domElement.getBoundingClientRect();
-    if (
-      e.clientX < rect.left ||
-      e.clientX > rect.right ||
-      e.clientY < rect.top ||
-      e.clientY > rect.bottom
-    ) {
-      return;
-    }
-
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
@@ -1096,26 +1394,108 @@ export class LabScene3D {
     const hits = this.raycaster.intersectObjects(candidates, false);
     if (hits.length > 0) {
       const info = this.clickableMeshes.get(hits[0].object);
-      if (info?.type === 'vessel') {
+      if (!info) return;
+
+      if (info.type === 'vessel') {
         this.setSelectedVessel(info.id);
         this.callbacks.onSelectVessel(info.id);
-      } else if (info?.type === 'reagent') {
-        this.callbacks.onSelectReagentFrom3D(info.id);
+        if (this.lastStation !== 'WORKBENCH') {
+          this.walkToStation('WORKBENCH');
+        }
+      } else if (info.type === 'reagent') {
+        if (this.lastStation === 'REAGENT_CABINET') {
+          this.callbacks.onInteractStation3D('REAGENT_CABINET', info.id);
+        } else {
+          this.walkToStation('REAGENT_CABINET');
+        }
+      } else if (info.type === 'station' && info.station) {
+        if (this.lastStation === info.station) {
+          this.callbacks.onInteractStation3D(info.station);
+        } else {
+          this.walkToStation(info.station);
+        }
       }
     }
   };
 
-  private updateParticlesAndProps(dt: number, nowSec: number): void {
-    // Flicker Bunsen flame
-    if (this.flameOuter.visible) {
-      const flicker = 1 + Math.sin(nowSec * 28) * 0.07 + Math.cos(nowSec * 43) * 0.04;
-      this.flameOuter.scale.y *= flicker;
-      this.flameOuter.scale.y = Math.min(1.6, Math.max(0.7, this.flameOuter.scale.y));
+  private updateParticlesAndFire(dt: number, nowSec: number): void {
+    // Explosion Debris Physics
+    if (this.explosionActiveTime > 0) {
+      this.explosionActiveTime -= dt;
+      this.explosionDebris.forEach((mesh) => {
+        mesh.position.x += mesh.userData.vx * dt;
+        mesh.position.y += mesh.userData.vy * dt;
+        mesh.position.z += mesh.userData.vz * dt;
+        mesh.userData.vy -= 9.8 * dt;
+        mesh.rotation.x += 6 * dt;
+        mesh.rotation.y += 5 * dt;
+        if (mesh.position.y < 0.02) {
+          mesh.position.y = 0.02;
+          mesh.userData.vx *= 0.6;
+          mesh.userData.vz *= 0.6;
+        }
+      });
+      if (this.explosionActiveTime <= 0) {
+        this.explosionDebris.forEach((m) => (m.visible = false));
+      }
     }
 
-    // Update Pouring Animation
+    // Workbench Fire Flames + Emergency Strobe + Beacon
+    if (this.fireGroup.visible) {
+      const ratio = Math.max(0.15, this.fireIntensity / 100);
+      this.emergencyStrobeLight.intensity = 1.5 + Math.sin(nowSec * 12) * 1.3;
+      this.extinguisherBeaconLight.intensity =
+        this.wallExtinguisherCylinder.visible ? 1.8 + Math.cos(nowSec * 14) * 1.4 : 0;
+
+      this.fireTongues.forEach((cone, idx) => {
+        const activeCount = Math.ceil(ratio * this.fireTongues.length);
+        cone.visible = idx < activeCount;
+        if (cone.visible) {
+          const flk = 0.75 + Math.sin(nowSec * cone.userData.speed + cone.userData.phase) * 0.32;
+          const s = (0.5 + ratio * 0.95) * flk;
+          cone.scale.set(s, s * 1.25, s);
+          cone.position.x = cone.userData.ox * (0.35 + ratio * 0.75);
+          cone.position.y = 0.16 * s;
+        }
+      });
+
+      this.smokeBillows.forEach((puff) => {
+        puff.userData.phase = (puff.userData.phase + dt * 0.55) % 1;
+        const p = puff.userData.phase;
+        puff.position.set(
+          puff.userData.ox * ratio,
+          0.35 + p * 2.1,
+          puff.userData.oz * ratio
+        );
+        puff.scale.setScalar((0.6 + p * 2.2) * (0.4 + ratio * 0.7));
+        (puff.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.48;
+      });
+    } else {
+      this.emergencyStrobeLight.intensity = 0;
+      this.extinguisherBeaconLight.intensity = 0;
+    }
+
+    // CO2 Fire Extinguisher Frost Spray Particles
+    this.sprayParticles.forEach((sp) => {
+      if (this.isSpraying) {
+        sp.visible = true;
+        sp.userData.phase = (sp.userData.phase + dt * 2.8) % 1;
+        const p = sp.userData.phase;
+        sp.position.set(
+          0.22 + sp.userData.spreadX * p * 1.8,
+          -0.16 + sp.userData.spreadY * p * 1.6,
+          -0.65 - p * 2.6
+        );
+        sp.scale.setScalar(0.5 + p * 2.8);
+        (sp.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.78;
+      } else {
+        sp.visible = false;
+      }
+    });
+
+    // Pouring Stream Animation
     if (this.pourAnim.active) {
-      this.pourAnim.progress += dt * 1.45;
+      this.pourAnim.progress += dt * 1.5;
       const p = this.pourAnim.progress;
       const targetVg = this.vesselGroups[this.pourAnim.targetIndex];
 
@@ -1130,9 +1510,7 @@ export class LabScene3D {
       } else if (targetVg) {
         const tx = targetVg.basePosition.x;
         const ty = targetVg.basePosition.y;
-
         if (this.pourAnim.sourceIndex !== null) {
-          // Vessel-to-Vessel pouring!
           const srcVg = this.vesselGroups[this.pourAnim.sourceIndex];
           const arc = Math.sin(p * Math.PI);
           srcVg.root.position.set(
@@ -1143,26 +1521,21 @@ export class LabScene3D {
           srcVg.root.rotation.z = -arc * 1.05;
           this.pourBottleGroup.visible = false;
         } else {
-          // Pouring from Reagent Bottle
           this.pourBottleGroup.visible = true;
           this.pourBottleBodyMat.color.set(this.pourAnim.colorHex);
           const arc = Math.sin(p * Math.PI);
           this.pourBottleGroup.position.set(tx + 0.16, ty + 0.42, 0);
           this.pourBottleGroup.rotation.z = arc * 1.15;
         }
-
-        // Liquid stream visible in middle of pour
-        if (p > 0.2 && p < 0.85) {
-          this.pourStreamMesh.visible = true;
+        this.pourStreamMesh.visible = p > 0.2 && p < 0.85;
+        if (this.pourStreamMesh.visible) {
           this.pourStreamMat.color.set(this.pourAnim.colorHex);
           this.pourStreamMesh.position.set(tx, ty + 0.24, 0);
-        } else {
-          this.pourStreamMesh.visible = false;
         }
       }
     }
 
-    // Update bubbles, steam, sparks per vessel
+    // Vessel Bubbles, Steam & Sparks
     this.vesselGroups.forEach((vg) => {
       const bubbleRate = vg.root.userData.bubbleRate || 0;
       const steamRate = vg.root.userData.steamRate || 0;
@@ -1192,11 +1565,7 @@ export class LabScene3D {
           sm.visible = true;
           sm.userData.phase = (sm.userData.phase + dt * 0.55) % 1;
           const p = sm.userData.phase;
-          sm.position.set(
-            sm.userData.driftX * p * 3,
-            maxH + 0.02 + p * 0.28,
-            0
-          );
+          sm.position.set(sm.userData.driftX * p * 3, maxH + 0.02 + p * 0.28, 0);
           sm.scale.setScalar(0.6 + p * 1.3);
           (sm.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.32;
         } else {
@@ -1222,9 +1591,77 @@ export class LabScene3D {
     });
   }
 
-  private updateSpatialWalk(dt: number): void {
+  private applyCollision(nextPos: THREE.Vector3): void {
+    nextPos.x = Math.max(-5.1, Math.min(5.05, nextPos.x));
+    nextPos.z = Math.max(-3.45, Math.min(4.4, nextPos.z));
+
+    // Central Workbench Collision Box (-1.58..1.58, -0.92..0.92)
+    if (Math.abs(nextPos.x) < 1.58 && Math.abs(nextPos.z) < 0.92) {
+      if (Math.abs(this.playerPos.z) >= 0.92) {
+        nextPos.z = Math.sign(this.playerPos.z) * 0.92;
+      } else {
+        nextPos.x = Math.sign(this.playerPos.x) * 1.58;
+      }
+    }
+  }
+
+  private evaluateStationProximity(): void {
+    const distBench = Math.hypot(this.playerPos.x, this.playerPos.z);
+    const distCabinet = Math.hypot(this.playerPos.x - -3.4, this.playerPos.z - -3.8);
+    const distSink = Math.hypot(this.playerPos.x - 5.1, this.playerPos.z - 1.2);
+    const distExt = Math.hypot(this.playerPos.x - 5.4, this.playerPos.z - -2.0);
+
+    let detected: StationId = null;
+    if (distExt < 2.25) detected = 'EXTINGUISHER_MOUNT';
+    else if (distCabinet < 2.45) detected = 'REAGENT_CABINET';
+    else if (distSink < 2.15) detected = 'SINK';
+    else if (distBench < 2.85) detected = 'WORKBENCH';
+
+    const roundedFireDist = Math.round(distBench * 10) / 10;
+    if (detected !== this.lastStation || Math.abs(roundedFireDist - this.lastReportedFireDist) >= 0.25) {
+      this.lastStation = detected;
+      this.lastReportedFireDist = roundedFireDist;
+      this.callbacks.onStationProximityChange(detected, distBench);
+    }
+  }
+
+  private updateSpatialWalk(dt: number, nowSec: number): void {
     if (this.cameraMode !== 'ROOM_WALK') return;
 
+    // 1. Auto-Walk smoothly across the room if user clicked a station or tapped Quick-Walk!
+    if (this.autoWalkTarget) {
+      const toTarget = this.autoWalkTarget.pos.clone().sub(this.playerPos);
+      toTarget.y = 0;
+      const dist = toTarget.length();
+
+      if (dist < 0.12) {
+        this.playerPos.copy(this.autoWalkTarget.pos);
+        this.playerYaw = this.autoWalkTarget.yaw;
+        this.playerPitch = -0.14;
+        this.updateWalkCameraRotation();
+        this.autoWalkTarget = null;
+      } else {
+        const step = Math.min(dist, 3.8 * dt);
+        toTarget.normalize();
+        const nextPos = this.playerPos.clone().addScaledVector(toTarget, step);
+        this.applyCollision(nextPos);
+        this.playerPos.copy(nextPos);
+
+        // Smoothly rotate yaw toward walk direction, then station yaw when close
+        const moveYaw = Math.atan2(-toTarget.x, -toTarget.z);
+        const desiredYaw = dist < 0.8 ? this.autoWalkTarget.yaw : moveYaw;
+        let diff = desiredYaw - this.playerYaw;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.playerYaw += diff * Math.min(1, 7 * dt);
+        this.updateWalkCameraRotation();
+      }
+      this.camera.position.copy(this.playerPos);
+      this.evaluateStationProximity();
+      return;
+    }
+
+    // 2. Manual WASD / Arrow / Touch D-Pad Walk
     let moveForward = this.mobileMove.forward;
     let moveStrafe = this.mobileMove.strafe;
 
@@ -1234,7 +1671,7 @@ export class LabScene3D {
     if (this.keysPressed.has('KeyD') || this.keysPressed.has('ArrowRight')) moveStrafe += 1;
 
     if (Math.abs(moveForward) > 0.01 || Math.abs(moveStrafe) > 0.01) {
-      const speed = 2.85 * dt;
+      const speed = 3.2 * dt;
       const forwardDir = new THREE.Vector3(-Math.sin(this.playerYaw), 0, -Math.cos(this.playerYaw));
       const rightDir = new THREE.Vector3(Math.cos(this.playerYaw), 0, -Math.sin(this.playerYaw));
 
@@ -1243,29 +1680,16 @@ export class LabScene3D {
         .addScaledVector(forwardDir, moveForward * speed)
         .addScaledVector(rightDir, moveStrafe * speed);
 
-      // Room walls collision clamp
-      nextPos.x = Math.max(-5.1, Math.min(5.1, nextPos.x));
-      nextPos.z = Math.max(-3.55, Math.min(4.4, nextPos.z));
-
-      // Central workbench collision box (-1.55..1.55, -0.85..0.85)
-      if (Math.abs(nextPos.x) < 1.58 && Math.abs(nextPos.z) < 0.92) {
-        if (Math.abs(this.playerPos.z) >= 0.92) {
-          nextPos.z = Math.sign(this.playerPos.z) * 0.92;
-        } else {
-          nextPos.x = Math.sign(this.playerPos.x) * 1.58;
-        }
-      }
-
+      this.applyCollision(nextPos);
       this.playerPos.copy(nextPos);
+      // Subtle head-bob while walking for realism!
+      const bob = Math.sin(nowSec * 11) * 0.022;
+      this.camera.position.set(this.playerPos.x, this.playerPos.y + bob, this.playerPos.z);
+    } else {
       this.camera.position.copy(this.playerPos);
     }
 
-    const distToBench = Math.hypot(this.playerPos.x, this.playerPos.z);
-    const isNear = distToBench < 2.85;
-    if (isNear !== this.wasNearBench) {
-      this.wasNearBench = isNear;
-      this.callbacks.onNearWorkbenchChange(isNear);
-    }
+    this.evaluateStationProximity();
   }
 
   private animate = (): void => {
@@ -1273,21 +1697,29 @@ export class LabScene3D {
     const now = performance.now();
     const dt = Math.min(0.08, (now - this.lastTime) / 1000);
     this.lastTime = now;
+    const nowSec = now / 1000;
 
     if (this.cameraMode !== 'ROOM_WALK') {
       if (this.isTransitioningCamera) {
-        this.camera.position.lerp(this.camTransitionTargetPos, 0.1);
-        this.orbit.target.lerp(this.camTransitionLookAt, 0.1);
+        this.camera.position.lerp(this.camTransitionTargetPos, 0.12);
+        this.orbit.target.lerp(this.camTransitionLookAt, 0.12);
         if (this.camera.position.distanceTo(this.camTransitionTargetPos) < 0.03) {
           this.isTransitioningCamera = false;
         }
       }
       this.orbit.update();
     } else {
-      this.updateSpatialWalk(dt);
+      this.updateSpatialWalk(dt, nowSec);
     }
 
-    this.updateParticlesAndProps(dt, now / 1000);
+    // Apply Explosion Trauma Camera Shake!
+    if (this.cameraShake > 0.005) {
+      this.camera.position.x += (Math.random() - 0.5) * this.cameraShake;
+      this.camera.position.y += (Math.random() - 0.5) * this.cameraShake;
+      this.cameraShake = Math.max(0, this.cameraShake - dt * 0.75);
+    }
+
+    this.updateParticlesAndFire(dt, nowSec);
     this.renderer.render(this.scene, this.camera);
   };
 
