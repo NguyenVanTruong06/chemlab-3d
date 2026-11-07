@@ -9,6 +9,8 @@ import {
 import { MinimalHud } from './components/MinimalHud';
 import { BackpackModal } from './components/BackpackModal';
 import { CabinetModal } from './components/CabinetModal';
+import { OuterHubScreen } from './components/OuterHubScreen';
+import { StageFlowScreens } from './components/StageFlowScreens';
 import {
   addReagentToVessel,
   createDefaultWorkbenchVessels,
@@ -17,14 +19,22 @@ import {
   SHELF_CHEMICALS,
   stepVesselSimulation,
 } from './engine/ChemistryEngine';
+import {
+  evaluateBadgesAndQuests,
+  loadLearnerProfile,
+  recordLessonCompletion,
+  saveLearnerProfile,
+} from './engine/LearnerStore';
 import { labAudio } from './engine/SoundEffects';
 import type {
   AppMode,
+  AppScreen,
   CameraMode,
   ChemicalDef,
   FireEmergencyState,
   HazardTriggerInfo,
   HotbarItem,
+  LearnerProfile,
   ReactionLogEntry,
   StationId,
   VesselState,
@@ -78,6 +88,10 @@ function evaluateLatchedLessonSteps(
 }
 
 export function App() {
+  const [learnerProfile, setLearnerProfile] = useState<LearnerProfile>(() =>
+    loadLearnerProfile()
+  );
+  const [appScreen, setAppScreen] = useState<AppScreen>('OUTER_HUB');
   const [appMode, setAppMode] = useState<AppMode>('CURRICULUM');
   const [cameraMode, setCameraMode] = useState<CameraMode>('ROOM_WALK');
   const [currentStation, setCurrentStation] = useState<StationId>('WORKBENCH');
@@ -93,6 +107,7 @@ export function App() {
 
   const [activeLessonId, setActiveLessonId] = useState<string>(GUIDED_LESSONS[0].id);
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
+  const [hadSafetyIncidentInRun, setHadSafetyIncidentInRun] = useState<boolean>(false);
   const [logs, setLogs] = useState<ReactionLogEntry[]>([]);
 
   const [backpackOpen, setBackpackOpen] = useState<boolean>(false);
@@ -116,7 +131,7 @@ export function App() {
   const toastTimerRef = useRef<number | null>(null);
   const tickCountRef = useRef<number>(0);
 
-  const showToast = useCallback((msg: string, durationMs = 3200) => {
+  const showToast = useCallback((msg: string, durationMs = 3400) => {
     setToastMessage(msg);
     if (toastTimerRef.current !== null) {
       window.clearTimeout(toastTimerRef.current);
@@ -128,6 +143,7 @@ export function App() {
   }, []);
 
   const latestRef = useRef({
+    appScreen,
     appMode,
     cameraMode,
     currentStation,
@@ -140,10 +156,12 @@ export function App() {
     completedSteps,
     fireEmergency,
     isSpraying,
+    learnerProfile,
   });
 
   useEffect(() => {
     latestRef.current = {
+      appScreen,
       appMode,
       cameraMode,
       currentStation,
@@ -156,6 +174,7 @@ export function App() {
       completedSteps,
       fireEmergency,
       isSpraying,
+      learnerProfile,
     };
   });
 
@@ -164,6 +183,7 @@ export function App() {
       labAudio.playExplosion();
       setBackpackOpen(false);
       setCabinetOpen(false);
+      setHadSafetyIncidentInRun(true);
       setExplosionCommand((prev) => ({
         seq: (prev?.seq || 0) + 1,
         vesselId,
@@ -182,11 +202,11 @@ export function App() {
     []
   );
 
-  // Real-time 10Hz Chemistry Kinetics + 25-Second Fire Emergency Loop
+  // Real-time 10Hz Chemistry Kinetics + 25-Second Fire Emergency Loop (Only when inside 3D Lab!)
   useEffect(() => {
     const timer = window.setInterval(() => {
       const snap = latestRef.current;
-      if (snap.fireEmergency.burnedDown) return;
+      if (snap.appScreen !== 'LAB_3D' || snap.fireEmergency.burnedDown) return;
 
       tickCountRef.current += 1;
       const tick = tickCountRef.current;
@@ -241,7 +261,10 @@ export function App() {
         if (evalRes.newlyFinishedAll) {
           labAudio.playSuccess();
           confetti({ particleCount: 55, spread: 65, origin: { y: 0.72 } });
-          showToast('🎉 Đã hoàn thành các bước thực hành! Mở Balo [B] để làm câu hỏi kiểm tra.', 4500);
+          showToast(
+            '🎉 Đã hoàn thành các bước thực hành! Bấm nút màu xanh góc trái trên để sang Bước 3: Kiểm tra & Nhận Sao!',
+            5000
+          );
         }
       }
 
@@ -278,6 +301,18 @@ export function App() {
             }));
             labAudio.playSuccess();
             confetti({ particleCount: 75, spread: 70, origin: { y: 0.62 } });
+
+            // Award Firefighter progress & check badge unlock!
+            setLearnerProfile((prevProf) => {
+              const bumped: LearnerProfile = {
+                ...prevProf,
+                firesExtinguishedCount: prevProf.firesExtinguishedCount + 1,
+              };
+              const { nextProfile } = evaluateBadgesAndQuests(bumped, GUIDED_LESSONS);
+              saveLearnerProfile(nextProfile);
+              return nextProfile;
+            });
+
             setLogs((prev) =>
               [
                 {
@@ -348,20 +383,33 @@ export function App() {
       const chem = SHELF_CHEMICALS.find((c) => c.formula === formula);
       if (!chem) return;
 
+      // Unlock reagent in Learner Codex!
+      setLearnerProfile((prevProf) => {
+        if (prevProf.unlockedReagents.includes(formula)) return prevProf;
+        const updated: LearnerProfile = {
+          ...prevProf,
+          unlockedReagents: [...prevProf.unlockedReagents, formula],
+        };
+        const { nextProfile } = evaluateBadgesAndQuests(updated, GUIDED_LESSONS);
+        saveLearnerProfile(nextProfile);
+        return nextProfile;
+      });
+
       const existingIdx = snap.hotbar.findIndex(
         (item) => item?.type === 'reagent' && item.formula === formula
       );
       if (existingIdx >= 0) {
         setActiveSlotIndex(existingIdx);
         labAudio.playClink();
-        showToast(`🧪 Đang cầm sẵn lọ ${chem.displayFormula} (Ô #${existingIdx + 1})`);
+        showToast(
+          `🧪 Đang cầm sẵn lọ ${chem.displayFormula} (${chem.iupacName}) — Ô #${existingIdx + 1}`
+        );
         return;
       }
 
       const emptyIdx = snap.hotbar.findIndex((item) => item === null);
       let targetIdx = emptyIdx;
       if (targetIdx === -1) {
-        // Avoid overwriting the fire extinguisher if possible
         const currentSlot = snap.hotbar[snap.activeSlotIndex];
         if (currentSlot?.type !== 'extinguisher') {
           targetIdx = snap.activeSlotIndex;
@@ -376,7 +424,9 @@ export function App() {
       setHotbar(nextHotbar);
       setActiveSlotIndex(targetIdx);
       labAudio.playClink();
-      showToast(`🧪 Đã lấy ${chem.displayFormula} vào Ô #${targetIdx + 1}`);
+      showToast(
+        `🧪 Đã lấy ${chem.displayFormula} • ${chem.iupacName} vào Ô #${targetIdx + 1}`
+      );
     },
     [showToast]
   );
@@ -434,6 +484,26 @@ export function App() {
       setVessels(nextVessels);
       setLogs((old) => [log, ...old].slice(0, 30));
 
+      // Increment daily dispense quest & unlock reagent in profile
+      setLearnerProfile((prevProf) => {
+        const unlocked = prevProf.unlockedReagents.includes(chem.formula)
+          ? prevProf.unlockedReagents
+          : [...prevProf.unlockedReagents, chem.formula];
+        const updated: LearnerProfile = {
+          ...prevProf,
+          unlockedReagents: unlocked,
+          reactionsTriggeredCount: prevProf.reactionsTriggeredCount + 1,
+          dailyQuestProgress: {
+            ...prevProf.dailyQuestProgress,
+            DQ_UNLOCK_REAGENTS:
+              (prevProf.dailyQuestProgress['DQ_UNLOCK_REAGENTS'] || 0) + 1,
+          },
+        };
+        const { nextProfile } = evaluateBadgesAndQuests(updated, GUIDED_LESSONS);
+        saveLearnerProfile(nextProfile);
+        return nextProfile;
+      });
+
       setPourCommand((prev) => ({
         seq: (prev?.seq || 0) + 1,
         targetVesselId: targetVessel.id,
@@ -452,7 +522,10 @@ export function App() {
         if (evalRes.newlyFinishedAll) {
           labAudio.playSuccess();
           confetti({ particleCount: 55, spread: 65, origin: { y: 0.72 } });
-          showToast('🎉 Đã hoàn thành thực hành! Mở Balo [B] làm câu hỏi kiểm tra.', 4500);
+          showToast(
+            '🎉 Đã hoàn thành thực hành! Bấm nút màu xanh góc trái trên để sang Bước 3: Kiểm tra & Nhận Sao!',
+            5000
+          );
         }
       }
 
@@ -571,13 +644,14 @@ export function App() {
     []
   );
 
-  // Global Game-Style Keyboard Shortcuts: [B], [Esc], [V], [F], [R], [1..6], [Space]
+  // Global Game-Style Keyboard Shortcuts inside 3D Lab: [B], [Esc], [V], [F], [R], [1..6], [Space]
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const snap = latestRef.current;
+      if (snap.appScreen !== 'LAB_3D') return;
+
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-
-      const snap = latestRef.current;
 
       if (e.code === 'Escape') {
         setBackpackOpen(false);
@@ -658,9 +732,108 @@ export function App() {
   const activeHeldItem = hotbar[activeSlotIndex] ?? null;
   const ownsExtinguisher = hotbar.some((item) => item?.type === 'extinguisher');
 
+  // ---------- SCREEN 1: OUTER LEARNING HUB ----------
+  if (appScreen === 'OUTER_HUB') {
+    return (
+      <OuterHubScreen
+        profile={learnerProfile}
+        lessons={GUIDED_LESSONS}
+        onUpdateProfileMeta={(displayName, schoolOrClass, avatarEmoji) => {
+          setLearnerProfile((prev) => {
+            const next = { ...prev, displayName, schoolOrClass, avatarEmoji };
+            saveLearnerProfile(next);
+            return next;
+          });
+        }}
+        onSelectGrade={(grade) => {
+          setLearnerProfile((prev) => {
+            const next = { ...prev, gradePreference: grade };
+            saveLearnerProfile(next);
+            return next;
+          });
+        }}
+        onStartLessonStage={(lessonId) => {
+          setActiveLessonId(lessonId);
+          setAppMode('CURRICULUM');
+          setVessels(createDefaultWorkbenchVessels());
+          setCompletedSteps({});
+          setHadSafetyIncidentInRun(false);
+          setLogs([]);
+          setFireEmergency(INITIAL_FIRE_STATE);
+          setAppScreen('THEORY_STAGE');
+        }}
+        onEnterSandboxLab={() => {
+          setAppMode('SANDBOX');
+          setVessels(createDefaultWorkbenchVessels());
+          setCompletedSteps({});
+          setHadSafetyIncidentInRun(false);
+          setLogs([]);
+          setFireEmergency(INITIAL_FIRE_STATE);
+          setBackpackOpen(false);
+          setCabinetOpen(false);
+          setAppScreen('LAB_3D');
+          showToast(
+            '🧪 Đã vào Phòng Lab Tự Do 3D! Mở Balo [B] xem hướng dẫn thử nổ hoặc ra Tủ [F] lấy hóa chất.'
+          );
+        }}
+      />
+    );
+  }
+
+  // ---------- SCREEN 2 & 4: STAGE 1 (THEORY) & STAGE 3 (QUIZ & STAR EVALUATION) ----------
+  if (appScreen === 'THEORY_STAGE' || appScreen === 'QUIZ_RESULT_STAGE') {
+    return (
+      <StageFlowScreens
+        key={`${activeLesson.id}-${appScreen}`}
+        mode={appScreen}
+        lesson={activeLesson}
+        hadSafetyIncidentInLab={hadSafetyIncidentInRun}
+        labLogs={logs}
+        onBackToHub={() => setAppScreen('OUTER_HUB')}
+        onProceedTo3DLab={() => {
+          setVessels(createDefaultWorkbenchVessels());
+          setCompletedSteps({});
+          setHadSafetyIncidentInRun(false);
+          setFireEmergency(INITIAL_FIRE_STATE);
+          setBackpackOpen(false);
+          setCabinetOpen(false);
+          setAppScreen('LAB_3D');
+          showToast(
+            `🔬 Chặng Thực hành: ${activeLesson.title} — Hãy đi tới Tủ Hóa Chất [F] lấy ${activeLesson.recommendedReagents.join(', ')}!`
+          );
+        }}
+        onRetry3DLab={() => {
+          setVessels(createDefaultWorkbenchVessels());
+          setCompletedSteps({});
+          setHadSafetyIncidentInRun(false);
+          setFireEmergency(INITIAL_FIRE_STATE);
+          setAppScreen('LAB_3D');
+        }}
+        onSubmitQuizAndFinish={(correctCount) => {
+          const res = recordLessonCompletion(
+            learnerProfile,
+            activeLesson,
+            GUIDED_LESSONS,
+            correctCount,
+            hadSafetyIncidentInRun
+          );
+          setLearnerProfile(res.nextProfile);
+          labAudio.playSuccess();
+          confetti({ particleCount: 80, spread: 70, origin: { y: 0.65 } });
+          return {
+            earnedStars: res.earnedStars,
+            quizScorePct: res.quizScorePct,
+            xpDelta: res.xpDelta,
+            newlyUnlockedBadges: res.newlyUnlockedBadges,
+          };
+        }}
+      />
+    );
+  }
+
+  // ---------- SCREEN 3: STAGE 2 (3D IMMERSIVE LAB) ----------
   return (
     <div className="chemlab-fullscreen-stage">
-      {/* Full-Viewport Interactive 3D Laboratory Scene */}
       <LabCanvas
         vessels={vessels}
         selectedVesselId={selectedVesselId}
@@ -679,7 +852,6 @@ export function App() {
         onInteractStation3D={handleInteractStation3D}
       />
 
-      {/* Minimalist Game-Style Spatial HUD (Zero Sidebars!) */}
       <MinimalHud
         appMode={appMode}
         cameraMode={cameraMode}
@@ -695,6 +867,18 @@ export function App() {
         isSpraying={isSpraying}
         soundMuted={soundMuted}
         toastMessage={toastMessage}
+        onExitToHub={() => {
+          setFireEmergency(INITIAL_FIRE_STATE);
+          setIsSpraying(false);
+          setAppScreen('OUTER_HUB');
+        }}
+        onFinishPracticeGoQuiz={() => {
+          setFireEmergency(INITIAL_FIRE_STATE);
+          setIsSpraying(false);
+          setBackpackOpen(false);
+          setCabinetOpen(false);
+          setAppScreen('QUIZ_RESULT_STAGE');
+        }}
         onOpenBackpack={() => {
           setCabinetOpen(false);
           setBackpackOpen(true);
@@ -728,7 +912,6 @@ export function App() {
         onMobileMove={(forward, strafe) => setMobileMove({ forward, strafe })}
       />
 
-      {/* Backpack Modal [B]: Lesson Requirements, Theory, Quiz, Inventory & Logs */}
       <BackpackModal
         isOpen={backpackOpen}
         appMode={appMode}
@@ -750,6 +933,7 @@ export function App() {
           setActiveLessonId(id);
           setVessels(createDefaultWorkbenchVessels());
           setCompletedSteps({});
+          setHadSafetyIncidentInRun(false);
           setFireEmergency(INITIAL_FIRE_STATE);
         }}
         onResetLab={handleResetAllLab}
@@ -763,7 +947,6 @@ export function App() {
         onWalkToCabinet={() => handleWalkToStation('REAGENT_CABINET')}
       />
 
-      {/* Reagent Cabinet Modal [F] when standing at the 3D Reagent Shelf */}
       <CabinetModal
         isOpen={cabinetOpen}
         hotbar={hotbar}

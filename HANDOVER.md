@@ -59,12 +59,15 @@ chemlab-3d/
     │   ├── reactions.json     <-- Dữ liệu Phản ứng THCS đồng bộ từ Sheets
     │   └── lessons.json       <-- Dữ liệu Bài học Lớp 8 - 9 đồng bộ từ Sheets
     ├── components/
+    │   ├── OuterHubScreen.tsx <-- Giao diện Sảnh Ngoài: Hồ sơ học sinh, Streak, XP/Cấp bậc, Lộ trình Lớp 8 & 9, Sổ tay IUPAC, Huy hiệu, Bảng xếp hạng
+    │   ├── StageFlowScreens.tsx <-- Luồng 3 Chặng: Chặng 1 (Lý thuyết & Cảnh báo an toàn) và Chặng 3 (Kiểm tra & Chấm 1-3 Sao)
     │   ├── LabCanvas.tsx      <-- Cầu nối React ↔ Three.js WebGL (Cầm đồ trên tay, Nổ mảnh vỡ, Lửa cháy lan)
-    │   ├── MinimalHud.tsx     <-- HUD tối giản: Nút Balo [B], Thanh Hotbar 6 ô [1..6], Thanh thao tác gọn tại bàn, Báo cháy 25s
+    │   ├── MinimalHud.tsx     <-- HUD tối giản: Nút về Sảnh, Balo [B], Thanh Hotbar 6 ô [1..6], Chuyển sang Bước 3 Kiểm tra
     │   ├── BackpackModal.tsx  <-- Balo & Sổ tay [B]: Yêu cầu bài học, Lý thuyết, Trắc nghiệm, Túi đồ & Nhật ký phản ứng
-    │   └── CabinetModal.tsx   <-- Tủ Hóa Chất [F]: Chọn lọ hóa chất thực tế bỏ vào Balo / Thanh cầm tay
+    │   └── CabinetModal.tsx   <-- Tủ Hóa Chất [F]: Chọn lọ hóa chất song ngữ IUPAC + Tiếng Việt bỏ vào Balo
     ├── engine/
-    │   ├── ChemistryEngine.ts <-- Bộ máy Hóa học & An toàn (H2SO4 đặc 98%, 4 kịch bản nổ vỡ cốc & phát hỏa)
+    │   ├── ChemistryEngine.ts <-- Bộ máy Hóa học & 6 Chặng bài học KHTN Lớp 8 - 9 (Danh pháp IUPAC + Tiếng Việt)
+    │   ├── LearnerStore.ts    <-- Lưu trữ Hồ sơ học tập, Mở khóa tuần tự theo Khối, Chấm 1-3 Sao an toàn, Huy hiệu & Nhiệm vụ ngày
     │   └── SoundEffects.ts    <-- Bộ tổng hợp âm thanh Web Audio API (Rót chất lỏng, Cốc chạm, Nổ lớn, Còi báo cháy, Xịt CO2)
     └── scene/
         └── LabScene3D.ts      <-- Không gian 3D thực tế: Đi tới Tủ/Bồn rửa/Bình cứu hỏa CO2 treo tường, Góc nhìn tay cầm lọ/bình xịt
@@ -78,11 +81,12 @@ Nếu bạn bắt đầu một phiên trò chuyện mới hoặc đổi tài kho
 
 > *"Đọc file `HANDOVER.md` trong repo `https://github.com/NguyenVanTruong06/chemlab-3d` và tiếp tục công việc tại Bước tiếp theo."*
 
-Lệnh khởi động môi trường:
+Lệnh khởi động & kiểm chứng môi trường:
 ```bash
 git clone https://github.com/NguyenVanTruong06/chemlab-3d.git
 cd chemlab-3d
 npm install
+npm test
 npm run dev
 ```
 
@@ -90,20 +94,13 @@ npm run dev
 
 ## 📋 5. Trạng Thái Hiện Tại & Bước Tiếp Theo
 
-- [x] **Phiên 1 — Khởi tạo Hệ sinh thái Đám mây:**
-  - Xuất bản PRD trên Google Docs & Kho dữ liệu 4 tab trên Google Sheets (`App - Web ( STUDY )`).
-  - Khởi tạo GitHub Repo `chemlab-3d`, tích hợp sẵn bộ **87+ Skills** trong `.agents/skills/`.
-- [x] **Giai đoạn 1 & 2 — Căn phòng Lab 3D & Bộ máy Hóa học Thời gian thực (MVP v1.0).**
-- [x] **Nâng cấp v2.0 — Tối giản Giao diện & Nhập vai Thực tế + Cháy nổ & Cứu hỏa 25 Giây:**
-  - **Loại bỏ hoàn toàn 2 thanh Sidebar hai bên** để giải phóng toàn bộ không gian 3D. Thay bằng nút **`🎒 Balo / Yêu cầu [B]`**, thanh **Hotbar 6 ô cầm tay `[1]..[6]`**, và thanh thao tác ngữ cảnh siêu gọn chỉ hiện khi đứng trước Bàn Thí Nghiệm.
-  - **Tương tác không gian vật lý thực tế:** Đi bộ (`WASD` / D-pad cảm ứng / Đi nhanh tới trạm) ra **Tủ Hóa Chất `[F]`** lấy lọ dung dịch cầm trên tay, ra **Bồn Rửa `[F]/[R]`** lấy `H2O` hoặc rửa/thay cốc vỡ, ra **Tường Phải `[F]`** giật chốt **Bình Chữa Cháy `CO2`**.
-  - **4 Kịch bản Sai Quy Tắc Gây Nổ Vỡ Cốc & Hỏa Hoạn 25 Giây:**
-    1. Đổ nước (`H2O`) trực tiếp vào `H2SO4` đặc 98% (`ACID_DILUTION_BLAST`) — đối chiếu với quy tắc chuẩn rót từ từ axit đặc vào nước an toàn.
-    2. Thả mẩu lớn Natri kim loại (`>= 0.5g`) vào nước hoặc thả `Na` vào axit mạnh (`SODIUM_BLAST`).
-    3. Bật đèn cồn ngay dưới bình đang sủi mạnh khí `H2` (`HYDROGEN_FIRE`).
-    4. Đun cạn khô bình thủy tinh rỗng vượt `255°C` (`OVERHEAT_RUPTURE`).
-  - **Cơ chế Cứu Hỏa Khẩn Cấp 25 Giây + Âm thanh Web Audio:** Khi nổ bốc cháy bàn thí nghiệm, còi báo động hú vang + đèn chớp đỏ trần nhà. Học sinh có **25.0 giây** để chạy tới tường phải lấy Bình `CO2`, chạy lại gần bàn (`<= 3.3m`) và giữ `SPACE` / nút Xịt để phun tuyết lạnh `CO2` dập lửa trước khi phòng Lab cháy rụi!
-- [ ] **Bước tiếp theo (Giai đoạn 3):**
-  1. Mở rộng thêm dụng cụ nâng cao (Ống dẫn khí sục `CO2` làm đục nước vôi trong `Ca(OH)2`, Kẹp sắt đốt dây `Fe` trong bình khí `O2`, Giấy quỳ tím cầm tay nhúng trực tiếp).
-  2. Mở rộng danh mục hóa chất & bài học Lớp 8 - 9 từ Google Sheets của bạn Sư phạm (`FeCl2`, `FeCl3`, `AgNO3`, nhận biết mất nhãn).
-  3. Cấu hình GitHub Actions tự động deploy bản Web lên GitHub Pages / Vercel để chia sẻ link chạy ngay trên điện thoại và máy tính cho học sinh thử nghiệm.
+- [x] **Phiên 1 — Khởi tạo Hệ sinh thái Đám mây (Docs PRD + Sheets Data + GitHub + 87 Skills).**
+- [x] **Nâng cấp v2.0 — Tối giản Giao diện 3D & Nhập vai Thực tế + Cháy nổ & Cứu hỏa 25 Giây.**
+- [x] **Nâng cấp v3.0 — Sảnh Học Tập Ngoài (Outer Hub) + Lộ trình Chặng Lớp 8 & 9 + Gamification Toàn Diện:**
+  - **Hồ sơ học sinh lưu tự động trên trình duyệt (`LearnerStore.ts`)**: Có mã định danh `studentId` sẵn sàng nối với Supabase/Firebase Auth ở bước sau.
+  - **Bản đồ Chặng theo từng Khối độc lập (KHTN Lớp 8 & Lớp 9 — GDPT 2018)**: Hiển thị song ngữ Quốc tế (IUPAC) + Tiếng Việt (`Sodium hydroxide • Natri hiđroxit`). Trong mỗi khối, hoàn thành Chặng $N$ sẽ tự động mở khóa Chặng $N+1$. Cổng **Phòng Lab Tự Do 3D (Sandbox)** luôn mở sẵn ở Sảnh chính.
+  - **Luồng 3 Bước Rõ Ràng (`StageFlowScreens.tsx`)**: `(1) Trạm Lý thuyết & Quy tắc An toàn` → `(2) Bước vào Phòng Lab 3D thực hành` → `(3) Trạm Kiểm tra & Tổng kết Điểm XP / 1–3 Sao` (nếu để nổ/cháy trong ca thực hành bài học sẽ bị giới hạn tối đa 2 Sao; Phòng Tự Do thử nổ thoải mái không trừ Sao).
+  - **Động lực học tập (4 tính năng kết hợp)**: Điểm `XP` & Cấp bậc, Chuỗi ngày học liên tiếp (`🔥 Streak`) + 3 Nhiệm vụ hàng ngày, Bộ sưu tập 5 Huy hiệu & Sổ tay Hóa chất song ngữ IUPAC (`14 chất`), cùng Bảng xếp hạng (`Leaderboard`).
+- [ ] **Bước tiếp theo (Giai đoạn 4):**
+  1. Nối nguồn dữ liệu trực tiếp từ Google Sheets của bạn Sư phạm sang ứng dụng và tích hợp Đăng nhập đám mây thật (Supabase / Firebase) khi cần đồng bộ đa thiết bị.
+  2. Bổ sung thêm dụng cụ nâng cao (Ống dẫn khí sục `CO2` vào `Ca(OH)2`, Kẹp đốt dây sắt trong bình `O2`) và mở rộng thêm các chương KHTN 8 - 9.

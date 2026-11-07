@@ -38,6 +38,8 @@ interface MinimalHudProps {
   isSpraying: boolean;
   soundMuted: boolean;
   toastMessage: string | null;
+  onExitToHub: () => void;
+  onFinishPracticeGoQuiz: () => void;
   onOpenBackpack: () => void;
   onOpenCabinet: () => void;
   onSetCameraMode: (mode: CameraMode) => void;
@@ -73,6 +75,8 @@ export function MinimalHud({
   isSpraying,
   soundMuted,
   toastMessage,
+  onExitToHub,
+  onFinishPracticeGoQuiz,
   onOpenBackpack,
   onOpenCabinet,
   onSetCameraMode,
@@ -136,8 +140,18 @@ export function MinimalHud({
 
   return (
     <div className="minimal-hud-layer">
-      {/* 1. TOP-LEFT: Compact Backpack Button + 1-Line Objective */}
+      {/* 1. TOP-LEFT: Exit to Outer Hub + Compact Backpack Button + 1-Line Objective */}
       <div className="hud-top-left">
+        <button
+          id="btn-exit-to-hub"
+          type="button"
+          className="hud-hub-exit-btn"
+          onClick={onExitToHub}
+          title="Rời phòng Lab về Sảnh Lộ Trình Học Tập"
+        >
+          ← Sảnh Lộ Trình
+        </button>
+
         <button
           id="btn-open-backpack"
           type="button"
@@ -164,14 +178,21 @@ export function MinimalHud({
         </button>
 
         {appMode === 'CURRICULUM' && !fireEmergency.active && (
-          <div className="hud-objective-chip" onClick={onOpenBackpack}>
-            <span className="obj-dot" />
-            <span className="obj-text">
-              {nextIncompleteStep
-                ? nextIncompleteStep.instruction
-                : '🎉 Đã xong thực hành! Mở Balo [B] làm câu hỏi kiểm tra.'}
-            </span>
-          </div>
+          nextIncompleteStep ? (
+            <div className="hud-objective-chip" onClick={onOpenBackpack}>
+              <span className="obj-dot" />
+              <span className="obj-text">{nextIncompleteStep.instruction}</span>
+            </div>
+          ) : (
+            <button
+              id="btn-go-quiz-stage"
+              type="button"
+              className="hud-finish-stage-cta"
+              onClick={onFinishPracticeGoQuiz}
+            >
+              🎉 Đã xong Thực hành! Bấm sang Bước 3: Kiểm tra & Nhận Sao →
+            </button>
+          )
         )}
       </div>
 

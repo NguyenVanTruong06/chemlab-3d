@@ -81,7 +81,9 @@ export function CabinetModal({
                       <span className="rec-tag">Cần cho bài</span>
                     )}
                   </div>
-                  <div className="cab-name">{chem.nameVi}</div>
+                  <div className="cab-name">
+                    <span className="iupac-inline">{chem.iupacName}</span> • {chem.nameVi}
+                  </div>
                   <p className="cab-note">
                     {chem.isHazardous && <AlertTriangle size={12} className="inline-warn" />}{' '}
                     {chem.safetyNote}

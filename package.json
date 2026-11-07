@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "node --experimental-strip-types scripts/verify_all.ts",
     "preview": "vite preview",
     "deploy": "bash scripts/deploy_pages.sh"
   },

@@ -15,7 +15,8 @@ export interface ChemicalDef {
   id: string;
   formula: string;
   displayFormula: string;
-  nameVi: string;
+  iupacName: string; // GDPT 2018 IUPAC Name (e.g., Hydrochloric acid)
+  nameVi: string; // Vietnamese name (e.g., Axit clohiđric)
   category: ChemicalCategory;
   stateType: ChemicalStateType;
   defaultMolarity?: number; // mol/L for aqueous solutions
@@ -72,6 +73,12 @@ export type CameraMode = 'ROOM_WALK' | 'WORKBENCH_FOCUS' | 'ORBIT_OVERVIEW';
 
 export type AppMode = 'SANDBOX' | 'CURRICULUM';
 
+export type AppScreen =
+  | 'OUTER_HUB'
+  | 'THEORY_STAGE'
+  | 'LAB_3D'
+  | 'QUIZ_RESULT_STAGE';
+
 export type StationId =
   | 'WORKBENCH'
   | 'REAGENT_CABINET'
@@ -120,11 +127,60 @@ export interface LessonTaskStep {
 export interface GuidedLesson {
   id: string;
   grade: 'Lớp 8' | 'Lớp 9';
+  orderInGrade: number; // 1, 2, 3... for sequential stage unlocking inside a grade
+  chapterTitle: string;
   title: string;
   summary: string;
+  keyEquations: string[];
   theoryPoints: string[];
   safetyWarning: string;
+  xpReward: number;
   recommendedReagents: string[];
   steps: LessonTaskStep[];
   quiz: LessonQuizQuestion[];
+}
+
+export interface LessonProgressRecord {
+  lessonId: string;
+  completed: boolean;
+  bestStars: 0 | 1 | 2 | 3; // 1: Done Lab, 2: Done Lab + Quiz >= 50%, 3: Done Lab (0 accidents) + Quiz 100%
+  bestQuizScorePct: number;
+  bestXpEarned: number;
+  attempts: number;
+  hadSafetyIncidentLastRun: boolean;
+  completedAtIso: string;
+}
+
+export interface BadgeDef {
+  id: string;
+  title: string;
+  description: string;
+  iconEmoji: string;
+  xpBonus: number;
+}
+
+export interface DailyQuestDef {
+  id: string;
+  title: string;
+  targetCount: number;
+  xpReward: number;
+}
+
+export interface LearnerProfile {
+  version: 1;
+  studentId: string; // Ready for Supabase/Firebase UID binding
+  displayName: string;
+  gradePreference: 'Lớp 8' | 'Lớp 9';
+  schoolOrClass: string;
+  avatarEmoji: string;
+  xp: number;
+  streakDays: number;
+  lastActiveDateYmd: string; // YYYY-MM-DD
+  lessonProgress: Record<string, LessonProgressRecord>;
+  unlockedReagents: string[]; // Formula strings discovered/used
+  unlockedBadges: string[]; // Badge IDs
+  dailyQuestProgress: Record<string, number>;
+  dailyQuestClaimed: Record<string, boolean>;
+  firesExtinguishedCount: number;
+  reactionsTriggeredCount: number;
 }

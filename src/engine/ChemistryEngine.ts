@@ -12,6 +12,7 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     id: 'CHEM_12',
     formula: 'H2O',
     displayFormula: 'H₂O',
+    iupacName: 'Water (Distilled)',
     nameVi: 'Nước cất',
     category: 'Dung môi',
     stateType: 'liquid',
@@ -24,6 +25,7 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     id: 'CHEM_01',
     formula: 'HCl',
     displayFormula: 'HCl 1.0M',
+    iupacName: 'Hydrochloric acid',
     nameVi: 'Axit clohiđric',
     category: 'Axit vô cơ',
     stateType: 'aqueous',
@@ -31,12 +33,13 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     molarMass: 36.5,
     colorHex: '#e0f2fe',
     opacity: 0.26,
-    safetyNote: 'Ăn mòn mạnh; sinh khí H₂ dễ cháy khi tác dụng với kim loại.',
+    safetyNote: 'Ăn mòn mạnh; sinh khí Hydrogen (H₂) dễ cháy khi tác dụng với kim loại.',
   },
   {
     id: 'CHEM_02',
     formula: 'H2SO4',
     displayFormula: 'H₂SO₄ loãng 1M',
+    iupacName: 'Sulfuric acid (dilute)',
     nameVi: 'Axit sunfuric loãng',
     category: 'Axit vô cơ',
     stateType: 'aqueous',
@@ -44,12 +47,13 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     molarMass: 98.0,
     colorHex: '#e0f2fe',
     opacity: 0.28,
-    safetyNote: 'Axit mạnh, dùng nhận biết muối Bari tạo kết tủa trắng BaSO₄.',
+    safetyNote: 'Acid mạnh, dùng nhận biết muối Barium tạo kết tủa trắng BaSO₄.',
   },
   {
     id: 'CHEM_14',
     formula: 'H2SO4_dac',
     displayFormula: 'H₂SO₄ ĐẶC 98%',
+    iupacName: 'Sulfuric acid (conc. 98%)',
     nameVi: 'Axit sunfuric đặc (98%)',
     category: 'Axit đặc nguy hiểm',
     stateType: 'aqueous',
@@ -58,13 +62,14 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     colorHex: '#fef3c7',
     opacity: 0.42,
     safetyNote:
-      'CỰC KỲ NGUY HIỂM: Rót nước vào H₂SO₄ đặc sẽ gây sôi bắn nổ vỡ cốc và bốc cháy! Phải rót từ từ axit vào nước.',
+      'CỰC KỲ NGUY HIỂM: Rót nước vào H₂SO₄ đặc sẽ gây sôi bắn nổ vỡ cốc và bốc cháy! Phải rót từ từ acid vào nước.',
     isHazardous: true,
   },
   {
     id: 'CHEM_03',
     formula: 'NaOH',
     displayFormula: 'NaOH 1.0M',
+    iupacName: 'Sodium hydroxide',
     nameVi: 'Natri hiđroxit',
     category: 'Bazơ kiềm',
     stateType: 'aqueous',
@@ -72,12 +77,13 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     molarMass: 40.0,
     colorHex: '#f1f5f9',
     opacity: 0.25,
-    safetyNote: 'Kiềm ăn mòn da; hòa tan kết tủa keo trắng Al(OH)₃ khi dùng dư.',
+    safetyNote: 'Base kiềm ăn mòn da; hòa tan kết tủa keo trắng Al(OH)₃ khi dùng dư.',
   },
   {
     id: 'CHEM_04',
     formula: 'BaCl2',
     displayFormula: 'BaCl₂ 0.5M',
+    iupacName: 'Barium chloride',
     nameVi: 'Bari clorua',
     category: 'Muối',
     stateType: 'aqueous',
@@ -85,12 +91,13 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     molarMass: 208.2,
     colorHex: '#f8fafc',
     opacity: 0.25,
-    safetyNote: 'Độc nếu nuốt; thuốc thử nhận biết gốc sunfat (=SO₄).',
+    safetyNote: 'Độc nếu nuốt; thuốc thử nhận biết gốc Sulfate (=SO₄).',
   },
   {
     id: 'CHEM_05',
     formula: 'CuSO4',
     displayFormula: 'CuSO₄ 0.5M',
+    iupacName: 'Copper(II) sulfate',
     nameVi: 'Đồng(II) sunfat',
     category: 'Muối',
     stateType: 'aqueous',
@@ -104,6 +111,7 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     id: 'CHEM_13',
     formula: 'AlCl3',
     displayFormula: 'AlCl₃ 0.5M',
+    iupacName: 'Aluminium chloride',
     nameVi: 'Nhôm clorua',
     category: 'Muối',
     stateType: 'aqueous',
@@ -117,6 +125,7 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     id: 'CHEM_10',
     formula: 'Phenolphtalein',
     displayFormula: 'Phenolphtalein',
+    iupacName: 'Phenolphthalein indicator',
     nameVi: 'Phenolphtalein (pha cồn)',
     category: 'Chỉ thị màu',
     stateType: 'indicator',
@@ -129,54 +138,59 @@ export const SHELF_CHEMICALS: ChemicalDef[] = [
     id: 'CHEM_11',
     formula: 'QuyTim',
     displayFormula: 'Quỳ tím (dd)',
+    iupacName: 'Litmus solution',
     nameVi: 'Dung dịch Quỳ tím',
     category: 'Chỉ thị màu',
     stateType: 'indicator',
     molarMass: 300.0,
     colorHex: '#6366f1',
     opacity: 0.6,
-    safetyNote: 'Hóa đỏ trong Axit (pH < 5), hóa xanh dương trong Bazơ (pH > 8.3).',
+    safetyNote: 'Hóa đỏ trong Acid (pH < 5), hóa xanh dương trong Base (pH > 8.3).',
   },
   {
     id: 'CHEM_06',
     formula: 'Al',
     displayFormula: 'Al (Lá nhôm)',
+    iupacName: 'Aluminium',
     nameVi: 'Nhôm kim loại',
     category: 'Kim loại',
     stateType: 'solid',
     molarMass: 27.0,
     colorHex: '#cbd5e1',
     opacity: 1.0,
-    safetyNote: 'Tan sủi bọt H₂ trong axit/kiềm. Không bật lửa trực tiếp khi khí H₂ thoát mạnh!',
+    safetyNote: 'Tan sủi bọt H₂ trong acid/kiềm. Không bật lửa trực tiếp khi khí H₂ thoát mạnh!',
   },
   {
     id: 'CHEM_08',
     formula: 'CaCO3',
     displayFormula: 'CaCO₃ (Đá vôi)',
+    iupacName: 'Calcium carbonate',
     nameVi: 'Canxi cacbonat',
     category: 'Muối',
     stateType: 'solid',
     molarMass: 100.1,
     colorHex: '#f8fafc',
     opacity: 1.0,
-    safetyNote: 'Chất rắn trắng không tan trong nước, sủi bọt khí CO₂ khi gặp axit.',
+    safetyNote: 'Chất rắn trắng không tan trong nước, sủi bọt khí Carbon dioxide (CO₂) khi gặp acid.',
   },
   {
     id: 'CHEM_09',
     formula: 'KMnO4',
     displayFormula: 'KMnO₄ (Tinh thể)',
+    iupacName: 'Potassium permanganate',
     nameVi: 'Kali pemanganat',
     category: 'Muối oxi hóa',
     stateType: 'solid',
     molarMass: 158.0,
     colorHex: '#be185d',
     opacity: 1.0,
-    safetyNote: 'Chất oxi hóa mạnh; nhiệt phân ở t° ≥ 200°C giải phóng khí O₂.',
+    safetyNote: 'Chất oxi hóa mạnh; nhiệt phân ở t° ≥ 200°C giải phóng khí Oxygen (O₂).',
   },
   {
     id: 'CHEM_07',
     formula: 'Na',
     displayFormula: 'Na (Kim loại kiềm)',
+    iupacName: 'Sodium',
     nameVi: 'Natri kim loại',
     category: 'Kim loại kiềm',
     stateType: 'solid',
@@ -1102,35 +1116,277 @@ export function stepVesselSimulation(
 }
 
 export const GUIDED_LESSONS: GuidedLesson[] = [
+  // ======================== KHỐI LỚP 8 (KHTN 8 — GDPT 2018) ========================
+  {
+    id: 'LES_G8_ACID_BASE_1',
+    grade: 'Lớp 8',
+    orderInGrade: 1,
+    chapterTitle: 'Chương 1 • Acid – Base – Thang pH & Chất chỉ thị',
+    title: 'Chặng 1: Nhận biết Acid & Base bằng Chỉ thị Màu & Phản ứng Trung hòa',
+    summary:
+      'Khám phá sự đổi màu của Phenolphthalein (Phenolphtalein) trong môi trường Base (Sodium hydroxide • Natri hiđroxit) và thực hiện phản ứng trung hòa với Hydrochloric acid (Axit clohiđric).',
+    keyEquations: [
+      'NaOH (pH ≈ 13.5) + Phenolphthalein → Dung dịch hóa hồng cánh sen',
+      'NaOH + HCl → NaCl (Sodium chloride • Natri clorua) + H₂O',
+    ],
+    theoryPoints: [
+      'Dung dịch Base (kiềm) như Sodium hydroxide (NaOH • Natri hiđroxit) có pH > 7, làm Phenolphthalein không màu chuyển sang màu hồng đậm và làm Quỳ tím (Litmus) hóa xanh.',
+      'Dung dịch Acid như Hydrochloric acid (HCl • Axit clohiđric) có pH < 7, làm Quỳ tím hóa đỏ.',
+      'Khi rót đủ HCl vào dung dịch NaOH đang có màu hồng Phenolphthalein, phản ứng trung hòa tạo muối Sodium chloride (NaCl) và nước làm dung dịch mất màu hồng đúng tại vùng pH ≤ 8.2.',
+    ],
+    safetyWarning:
+      'Sodium hydroxide (NaOH) ăn mòn và làm trơn nhờn da tay; Hydrochloric acid (HCl) gây bỏng rát. Không đun khô dung dịch chỉ thị cồn trên ngọn lửa lớn.',
+    xpReward: 120,
+    recommendedReagents: ['NaOH', 'Phenolphtalein', 'HCl'],
+    steps: [
+      {
+        id: 'g8-1-s1',
+        instruction:
+          'Đi tới Tủ Hóa Chất [F] lấy NaOH, Phenolphtalein & HCl, sau đó rót ≥ 15 ml NaOH 1.0M vào Cốc A.',
+        hint: 'Bấm "Tới Tủ Hóa Chất", nhặt NaOH, Phenolphtalein, HCl vào thanh đồ rồi quay lại Bàn Lab rót +15 ml NaOH vào Cốc A.',
+        checkCondition: (vessels) =>
+          vessels.some((v) => (v.moles['NaOH'] || 0) >= 0.012 || (v.moles['NaCl'] || 0) >= 0.01),
+      },
+      {
+        id: 'g8-1-s2',
+        instruction:
+          'Nhỏ chỉ thị Phenolphthalein (+0.5 ml hoặc +1.5 ml) vào Cốc A để quan sát dung dịch hóa màu hồng cánh sen.',
+        hint: 'Chọn lọ Phenolphtalein trên thanh công cụ dưới đáy màn hình và bấm "+0.5ml (1 giọt)".',
+        checkCondition: (vessels) =>
+          vessels.some((v) => (v.moles['Phenolphtalein'] || 0) > 1e-5 && v.pH >= 8.2),
+      },
+      {
+        id: 'g8-1-s3',
+        instruction:
+          'Rót Hydrochloric acid (HCl 1.0M, +15 ml hoặc +50 ml) vào Cốc A để trung hòa hết NaOH, làm dung dịch mất màu hồng (pH ≤ 7.5).',
+        hint: 'Chọn lọ HCl 1.0M và nhấn "+15 ml" (hoặc thêm nữa) cho tới khi màu hồng biến mất hoàn toàn.',
+        checkCondition: (vessels) =>
+          vessels.some(
+            (v) =>
+              (v.moles['Phenolphtalein'] || 0) > 1e-5 &&
+              (v.moles['NaCl'] || 0) >= 0.012 &&
+              v.pH <= 7.5
+          ),
+      },
+    ],
+    quiz: [
+      {
+        id: 'g8-1-q1',
+        question:
+          'Nhỏ vài giọt Phenolphthalein vào dung dịch Sodium hydroxide (NaOH • Natri hiđroxit), dung dịch chuyển sang màu gì?',
+        options: ['Màu xanh lam', 'Màu hồng cánh sen', 'Màu vàng nhạt', 'Không đổi màu'],
+        correctIndex: 1,
+        explanation:
+          'Trong môi trường Base kiềm (pH ≥ 8.3), chỉ thị Phenolphthalein chuyển sang màu hồng đặc trưng.',
+      },
+      {
+        id: 'g8-1-q2',
+        question:
+          'Vì sao khi nhỏ tiếp Hydrochloric acid (HCl) tới dư vào cốc NaOH có Phenolphthalein thì màu hồng biến mất?',
+        options: [
+          'Do HCl làm bay hơi chất chỉ thị',
+          'Do phản ứng trung hòa NaOH + HCl → NaCl + H₂O làm hết môi trường kiềm (pH giảm về ≤ 7)',
+          'Do tạo kết tủa trắng che khuất màu hồng',
+          'Do nhiệt độ giảm xuống dưới 0°C',
+        ],
+        correctIndex: 1,
+        explanation:
+          'HCl trung hòa hoàn toàn OH⁻ của NaOH tạo muối trung tính Sodium chloride (NaCl) và nước.',
+      },
+    ],
+  },
+  {
+    id: 'LES_G8_GAS_EXOTHERMIC_2',
+    grade: 'Lớp 8',
+    orderInGrade: 2,
+    chapterTitle: 'Chương 2 • Phản ứng Hóa học & Biến thiên Năng lượng',
+    title: 'Chặng 2: Phản ứng Tỏa nhiệt & Giải phóng Khí (H₂, CO₂)',
+    summary:
+      'Thực chứng dấu hiệu tạo thành chất khí và sự tăng nhiệt độ trong phản ứng giữa Kim loại Aluminium (Nhôm) và muối Calcium carbonate (Đá vôi) với dung dịch Acid.',
+    keyEquations: [
+      '2Al + 6HCl → 2AlCl₃ (Aluminium chloride) + 3H₂↑ (Tỏa nhiệt)',
+      'CaCO₃ (Calcium carbonate) + 2HCl → CaCl₂ + CO₂↑ + H₂O',
+    ],
+    theoryPoints: [
+      'Dấu hiệu nhận biết phản ứng hóa học xảy ra gồm: sủi bọt khí, xuất hiện kết tủa, đổi màu sắc hoặc tỏa nhiệt/thu nhiệt.',
+      'Aluminium (Al • Nhôm) tác dụng với Hydrochloric acid (HCl) giải phóng khí Hydrogen (H₂↑) không màu và tỏa nhiều nhiệt làm cốc ấm lên.',
+      'Calcium carbonate (CaCO₃ • Canxi cacbonat / Đá vôi) tan trong dung dịch HCl sủi bọt mạnh khí Carbon dioxide (CO₂↑).',
+    ],
+    safetyWarning:
+      'TUYỆT ĐỐI KHÔNG bật Đèn Cồn ngay dưới bình đang thoát mạnh khí Hydrogen (H₂) vì hỗn hợp H₂ + O₂ sẽ phát nổ mạnh!',
+    xpReward: 140,
+    recommendedReagents: ['HCl', 'Al', 'CaCO3'],
+    steps: [
+      {
+        id: 'g8-2-s1',
+        instruction:
+          'Lấy HCl, Al (Lá nhôm) và CaCO₃ (Đá vôi) từ Tủ Hóa Chất. Rót ≥ 50 ml HCl 1.0M vào Cốc A.',
+        hint: 'Đi tới Tủ Hóa Chất [F] lấy HCl, Al, CaCO₃ rồi rót +50 ml HCl vào Cốc A.',
+        checkCondition: (vessels) =>
+          vessels.some((v) => (v.moles['HCl'] || 0) >= 0.03 || (v.moles['AlCl3'] || 0) >= 0.004),
+      },
+      {
+        id: 'g8-2-s2',
+        instruction:
+          'Thả mẩu Aluminium (Al • Lá nhôm +0.25g) vào Cốc A chứa HCl, quan sát bọt khí Hydrogen (H₂) sủi lên và nhiệt độ tăng!',
+        hint: 'Cầm lọ Al trên thanh đồ và bấm "+0.25g" vào Cốc A, chờ vài giây để nhôm phản ứng sinh khí H₂.',
+        checkCondition: (vessels) =>
+          vessels.some(
+            (v) => (v.totalGasEvolved['H2'] || 0) >= 0.002 && v.temperatureC >= 28.0
+          ),
+      },
+      {
+        id: 'g8-2-s3',
+        instruction:
+          'Sang Cốc B: Rót ≥ 15 ml HCl 1.0M rồi thả Calcium carbonate (CaCO₃ • Đá vôi +0.25g) để thu khí Carbon dioxide (CO₂↑).',
+        hint: 'Chọn Cốc B trên thanh Bàn Lab, rót +15 ml HCl rồi thả +0.25g CaCO₃.',
+        checkCondition: (vessels) =>
+          vessels.some((v) => (v.totalGasEvolved['CO2'] || 0) >= 0.001),
+      },
+    ],
+    quiz: [
+      {
+        id: 'g8-2-q1',
+        question:
+          'Khi thả lá Aluminium (Al • Nhôm) vào dung dịch Hydrochloric acid (HCl), khí nào thoát ra và nhiệt độ dung dịch thay đổi ra sao?',
+        options: [
+          'Khí Oxygen (O₂), dung dịch lạnh đi',
+          'Khí Hydrogen (H₂), dung dịch nóng lên do phản ứng tỏa nhiệt',
+          'Khí Carbon dioxide (CO₂), nhiệt độ không đổi',
+          'Khí Chlorine (Cl₂), dung dịch đóng băng',
+        ],
+        correctIndex: 1,
+        explanation:
+          'Phản ứng 2Al + 6HCl → 2AlCl₃ + 3H₂↑ là phản ứng tỏa nhiệt mạnh (ΔH < 0) và sinh khí Hydrogen.',
+      },
+      {
+        id: 'g8-2-q2',
+        question:
+          'Vì sao không được châm ngọn lửa đèn cồn trực tiếp ở miệng bình khi khí Hydrogen (H₂) đang thoát ra mạnh?',
+        options: [
+          'Vì khí H₂ làm tắt ngọn lửa ngay lập tức',
+          'Vì H₂ trộn với O₂ không khí tạo hỗn hợp nổ mạnh khi gặp lửa',
+          'Vì làm bay màu dung dịch',
+          'Vì tạo ra kết tủa đen',
+        ],
+        correctIndex: 1,
+        explanation:
+          'Hỗn hợp khí H₂ và O₂ (đặc biệt ở tỉ lệ thể tích 2:1) gây nổ dữ dội khi tiếp xúc nguồn lửa hở.',
+      },
+    ],
+  },
+  {
+    id: 'LES_G8_PRECIPITATE_3',
+    grade: 'Lớp 8',
+    orderInGrade: 3,
+    chapterTitle: 'Chương 3 • Muối & Phản ứng Trao đổi Ion trong Dung dịch',
+    title: 'Chặng 3: Nhận biết Gốc Sulfate (=SO₄) bằng Kết tủa Trắng BaSO₄',
+    summary:
+      'Thực hiện phản ứng trao đổi giữa Barium chloride (Bari clorua) và Sulfuric acid loãng (Axit sunfuric loãng) tạo kết tủa trắng bền Barium sulfate (BaSO₄↓).',
+    keyEquations: [
+      'BaCl₂ (Barium chloride) + H₂SO₄ (loãng) → BaSO₄↓ (trắng) + 2HCl',
+    ],
+    theoryPoints: [
+      'Phản ứng trao đổi trong dung dịch các chất điện li chỉ xảy ra khi các ion kết hợp được với nhau tạo thành ít nhất một trong các chất: chất kết tủa (↓), chất khí (↑) hoặc chất điện li yếu (H₂O).',
+      'Dung dịch Barium chloride (BaCl₂ • Bari clorua) là thuốc thử đặc trưng để nhận biết gốc Sulfate (=SO₄) vì tạo ngay kết tủa trắng Barium sulfate (BaSO₄↓) không tan trong acid và kiềm.',
+    ],
+    safetyWarning:
+      'Các hợp chất Barium (Ba²⁺) tan trong nước có độc tính nếu nuốt phải. Hãy dùng đúng lọ H₂SO₄ loãng 1M (hoặc pha loãng đúng quy tắc).',
+    xpReward: 150,
+    recommendedReagents: ['H2SO4', 'BaCl2'],
+    steps: [
+      {
+        id: 'g8-3-s1',
+        instruction:
+          'Đi tới Tủ Hóa Chất [F] lấy H₂SO₄ loãng 1M và BaCl₂ 0.5M. Rót ≥ 15 ml H₂SO₄ loãng vào Cốc A.',
+        hint: 'Nhặt lọ H₂SO₄ loãng 1M và BaCl₂ 0.5M từ Tủ Hóa Chất rồi rót +15 ml H₂SO₄ loãng vào Cốc A.',
+        checkCondition: (vessels) =>
+          vessels.some((v) => (v.moles['H2SO4'] || 0) >= 0.01 || (v.moles['BaSO4'] || 0) >= 0.005),
+      },
+      {
+        id: 'g8-3-s2',
+        instruction:
+          'Nhỏ dung dịch Barium chloride (BaCl₂ 0.5M, +15 ml) vào Cốc A để tạo lớp kết tủa trắng Barium sulfate (BaSO₄↓) lắng dưới đáy cốc!',
+        hint: 'Chọn lọ BaCl₂ trên thanh đồ và bấm "+15 ml" vào Cốc A.',
+        checkCondition: (vessels) =>
+          vessels.some((v) => (v.moles['BaSO4'] || 0) >= 0.005),
+      },
+    ],
+    quiz: [
+      {
+        id: 'g8-3-q1',
+        question:
+          'Chất kết tủa màu trắng xuất hiện ngay khi nhỏ Barium chloride (BaCl₂) vào Sulfuric acid (H₂SO₄) có công thức và tên IUPAC là gì?',
+        options: [
+          'BaCO₃ — Barium carbonate',
+          'BaSO₄ — Barium sulfate (Bari sunfat)',
+          'Ba(OH)₂ — Barium hydroxide',
+          'NaCl — Sodium chloride',
+        ],
+        correctIndex: 1,
+        explanation:
+          'Ion Ba²⁺ kết hợp với SO₄²⁻ tạo kết tủa trắng Barium sulfate (BaSO₄↓) bền trong môi trường acid.',
+      },
+      {
+        id: 'g8-3-q2',
+        question:
+          'Điều kiện để phản ứng trao đổi giữa hai dung dịch muối hoặc acid-muối xảy ra là gì?',
+        options: [
+          'Phải đun sôi trên 200°C',
+          'Sản phẩm tạo thành phải có chất kết tủa (↓), chất khí (↑) hoặc nước (H₂O)',
+          'Phải có mặt kim loại Natri',
+          'Hai dung dịch phải có màu xanh lam',
+        ],
+        correctIndex: 1,
+        explanation:
+          'Phản ứng trao đổi ion trong dung dịch chỉ xảy ra khi làm giảm nồng độ ion tự do nhờ tạo kết tủa, chất khí hoặc chất điện li yếu.',
+      },
+    ],
+  },
+
+  // ======================== KHỐI LỚP 9 (KHTN 9 — GDPT 2018) ========================
   {
     id: 'LES_AMPHOTERIC_9',
     grade: 'Lớp 9',
-    title: 'Bài 1: Hiện tượng "Đổ dư kết tủa tan" — AlCl₃ + NaOH',
+    orderInGrade: 1,
+    chapterTitle: 'Chương 1 • Kim loại & Hợp chất Lưỡng tính của Aluminium',
+    title: 'Chặng 1: Hiện tượng "Đổ dư kết tủa tan" — AlCl₃ + NaOH',
     summary:
-      'Đi tới Tủ Hóa Chất lấy AlCl₃ và NaOH vào Balo, sau đó quay lại Bàn Thí Nghiệm thực hiện phản ứng kết tủa keo trắng rồi đổ dư NaOH cho kết tủa tan.',
-    theoryPoints: [
-      'Giai đoạn 1 (vừa đủ): AlCl₃ + 3NaOH → Al(OH)₃↓ (keo trắng) + 3NaCl.',
-      'Giai đoạn 2 (nhỏ dư kiềm): Al(OH)₃ + NaOH → NaAlO₂ (tan trong suốt) + 2H₂O.',
+      'Đi tới Tủ Hóa Chất lấy Aluminium chloride (Nhôm clorua • AlCl₃) và Sodium hydroxide (Natri hiđroxit • NaOH), thực hiện phản ứng tạo kết tủa keo trắng Aluminium hydroxide rồi đổ dư kiềm cho kết tủa tan hoàn toàn.',
+    keyEquations: [
+      'AlCl₃ + 3NaOH (vừa đủ) → Al(OH)₃↓ (keo trắng) + 3NaCl',
+      'Al(OH)₃↓ + NaOH (dư) → NaAlO₂ (Sodium aluminate • tan trong suốt) + 2H₂O',
     ],
-    safetyWarning: 'Không lấy nhầm Na kim loại hoặc H₂SO₄ đặc. Đeo găng tay khi thao tác với kiềm NaOH.',
+    theoryPoints: [
+      'Giai đoạn 1 (tỉ lệ mol 1:3): Nhỏ từ từ Sodium hydroxide (NaOH) vào dung dịch Aluminium chloride (AlCl₃ • Nhôm clorua) tạo kết tủa keo trắng Aluminium hydroxide — Al(OH)₃↓.',
+      'Giai đoạn 2 (nhỏ dư NaOH): Do Al(OH)₃ có tính lưỡng tính, kết tủa keo trắng phản ứng tiếp với NaOH dư tạo muối tan Sodium aluminate (NaAlO₂ • Natri aluminat) làm dung dịch trong suốt trở lại.',
+    ],
+    safetyWarning:
+      'Không lấy nhầm Sodium (Na kim loại) hoặc H₂SO₄ đặc. Đeo găng tay bảo hộ khi thao tác với kiềm mạnh NaOH.',
+    xpReward: 160,
     recommendedReagents: ['AlCl3', 'NaOH'],
     steps: [
       {
         id: 'step-1',
-        instruction: 'Đi tới Tủ Hóa Chất lấy AlCl₃ & NaOH, sau đó rót ≥ 20 ml AlCl₃ 0.5M vào Cốc A.',
+        instruction:
+          'Đi tới Tủ Hóa Chất lấy AlCl₃ & NaOH, sau đó rót ≥ 20 ml AlCl₃ 0.5M vào Cốc A.',
         hint: 'Đi bộ (WASD hoặc bấm "Tới Tủ Hóa Chất") mở tủ lấy AlCl₃ và NaOH vào thanh đồ bên dưới.',
         checkCondition: (vessels) =>
-          vessels.some((v) => (v.moles['AlCl3'] || 0) >= 0.008 || (v.moles['Al(OH)3'] || 0) > 0.002),
+          vessels.some(
+            (v) => (v.moles['AlCl3'] || 0) >= 0.008 || (v.moles['Al(OH)3'] || 0) > 0.002
+          ),
       },
       {
         id: 'step-2',
-        instruction: 'Cầm lọ NaOH 1.0M trên thanh đồ, nhỏ vừa phải (+15 ml) vào Cốc A để tạo kết tủa keo trắng Al(OH)₃.',
+        instruction:
+          'Cầm lọ NaOH 1.0M trên thanh đồ, nhỏ vừa phải (+15 ml) vào Cốc A để tạo kết tủa keo trắng Al(OH)₃.',
         hint: 'Chọn ô NaOH dưới đáy màn hình rồi nhấn nút "+15 ml" khi đang chọn Cốc A.',
         checkCondition: (vessels) => vessels.some((v) => (v.moles['Al(OH)3'] || 0) >= 0.002),
       },
       {
         id: 'step-3',
-        instruction: 'Đổ DƯ tiếp NaOH (+50 ml) vào Cốc A cho tới khi lớp kết tủa keo trắng tan hết!',
+        instruction:
+          'Đổ DƯ tiếp NaOH (+50 ml) vào Cốc A cho tới khi lớp kết tủa keo trắng tan hết!',
         hint: 'Nhấn "+50 ml" NaOH để quan sát đáy cốc chuyển về trong suốt (NaAlO₂).',
         checkCondition: (vessels) =>
           vessels.some(
@@ -1141,52 +1397,87 @@ export const GUIDED_LESSONS: GuidedLesson[] = [
     quiz: [
       {
         id: 'q1',
-        question: 'Khi nhỏ từ từ tới dư NaOH vào dung dịch AlCl₃, hiện tượng nào xảy ra?',
+        question:
+          'Khi nhỏ từ từ tới dư Sodium hydroxide (NaOH) vào dung dịch Aluminium chloride (AlCl₃), hiện tượng nào xảy ra?',
         options: [
           'Kết tủa trắng bền không tan',
-          'Tạo kết tủa keo trắng tăng dần, sau đó tan hết tạo dung dịch trong suốt',
+          'Tạo kết tủa keo trắng tăng dần đến cực đại, sau đó tan hết tạo dung dịch trong suốt',
           'Nổ mạnh và bốc cháy',
           'Dung dịch hóa xanh lam',
         ],
         correctIndex: 1,
-        explanation: 'Do Al(OH)₃ có tính lưỡng tính, tan trong kiềm dư tạo muối Natri aluminat NaAlO₂.',
+        explanation:
+          'Do Aluminium hydroxide — Al(OH)₃ có tính lưỡng tính, tan trong kiềm dư tạo muối Sodium aluminate (NaAlO₂).',
+      },
+      {
+        id: 'q2',
+        question:
+          'Nếu sục từ từ khí Carbon dioxide (CO₂) hoặc nhỏ từng giọt HCl vừa đủ vào dung dịch Sodium aluminate (NaAlO₂), hiện tượng gì xảy ra?',
+        options: [
+          'Tái tạo lại kết tủa keo trắng Al(OH)₃↓',
+          'Tạo kết tủa màu đen',
+          'Không có phản ứng',
+          'Giải phóng khí Hydrogen',
+        ],
+        correctIndex: 0,
+        explanation:
+          'Phản ứng NaAlO₂ + HCl + H₂O → Al(OH)₃↓ + NaCl tái tạo lại kết tủa keo trắng.',
       },
     ],
   },
   {
     id: 'LES_THERMAL_CU_9',
     grade: 'Lớp 9',
-    title: 'Bài 2: Điều chế & Nhiệt phân Cu(OH)₂ trên Đèn Cồn (> 80°C)',
+    orderInGrade: 2,
+    chapterTitle: 'Chương 2 • Base Không tan & Phản ứng Nhiệt phân',
+    title: 'Chặng 2: Điều chế & Nhiệt phân Copper(II) hydroxide trên Đèn Cồn (> 80°C)',
     summary:
-      'Lấy CuSO₄ và NaOH từ Tủ Hóa Chất, tạo kết tủa xanh lam trong Bình Nhiệt C và bật đèn cồn đun vượt 80°C.',
-    theoryPoints: [
-      'Tạo kết tủa: CuSO₄ + 2NaOH → Cu(OH)₂↓ (xanh lam) + Na₂SO₄.',
-      'Nhiệt phân (> 80°C): Cu(OH)₂ —(t°)→ CuO↓ (màu đen) + H₂O.',
+      'Lấy Copper(II) sulfate (Đồng(II) sunfat • CuSO₄) và Sodium hydroxide (NaOH) từ Tủ Hóa Chất, tạo kết tủa xanh lam Cu(OH)₂ trong Bình Nhiệt C và bật đèn cồn đun vượt 80°C.',
+    keyEquations: [
+      'CuSO₄ + 2NaOH → Cu(OH)₂↓ (Copper(II) hydroxide • xanh lam) + Na₂SO₄',
+      'Cu(OH)₂ —(t° ≥ 80°C)→ CuO↓ (Copper(II) oxide • màu đen) + H₂O',
     ],
-    safetyWarning: 'Tắt đèn cồn ngay sau khi kết tủa đã hóa đen hết, không đun cạn khô quá 255°C gây nổ bình!',
+    theoryPoints: [
+      'Tạo kết tủa Base không tan: Copper(II) sulfate (CuSO₄ • Đồng(II) sunfat) tác dụng với NaOH tạo kết tủa màu xanh lam đặc trưng của Copper(II) hydroxide — Cu(OH)₂↓.',
+      'Tính kém bền nhiệt: Khi đun nóng trên Đèn Cồn vượt ngưỡng 80°C, kết tủa xanh lam Cu(OH)₂ phân hủy thành chất rắn màu đen Copper(II) oxide (CuO • Đồng(II) oxit) và nước.',
+    ],
+    safetyWarning:
+      'Tắt đèn cồn ngay sau khi kết tủa đã hóa đen hết, không đun cạn khô quá 255°C gây nứt vỡ bình thủy tinh!',
+    xpReward: 170,
     recommendedReagents: ['CuSO4', 'NaOH'],
     steps: [
       {
         id: 'cu-1',
-        instruction: 'Lấy CuSO₄ 0.5M từ Tủ Hóa Chất và rót ≥ 15 ml vào Bình Nhiệt C (trên đèn cồn).',
+        instruction:
+          'Lấy CuSO₄ 0.5M từ Tủ Hóa Chất và rót ≥ 15 ml vào Bình Nhiệt C (đặt trên kiềng đèn cồn).',
         hint: 'Click chọn Bình Nhiệt C bên phải bàn, cầm lọ CuSO₄ và bấm +15 ml.',
         checkCondition: (vessels) => {
           const v3 = vessels.find((v) => v.isHeatable);
-          return !!v3 && ((v3.moles['CuSO4'] || 0) > 0.005 || (v3.moles['Cu(OH)2'] || 0) > 0.002 || (v3.moles['CuO'] || 0) > 0.002);
+          return (
+            !!v3 &&
+            ((v3.moles['CuSO4'] || 0) > 0.005 ||
+              (v3.moles['Cu(OH)2'] || 0) > 0.002 ||
+              (v3.moles['CuO'] || 0) > 0.002)
+          );
         },
       },
       {
         id: 'cu-2',
-        instruction: 'Rót thêm NaOH 1.0M vào Bình Nhiệt C để tạo kết tủa xanh lam Cu(OH)₂.',
+        instruction:
+          'Rót thêm NaOH 1.0M vào Bình Nhiệt C để tạo kết tủa xanh lam Copper(II) hydroxide — Cu(OH)₂.',
         hint: 'Chọn lọ NaOH trên thanh đồ rồi nhấn +15 ml hoặc +50 ml.',
         checkCondition: (vessels) => {
           const v3 = vessels.find((v) => v.isHeatable);
-          return !!v3 && ((v3.moles['Cu(OH)2'] || 0) > 0.003 || (v3.moles['CuO'] || 0) > 0.003);
+          return (
+            !!v3 &&
+            ((v3.moles['Cu(OH)2'] || 0) > 0.003 || (v3.moles['CuO'] || 0) > 0.003)
+          );
         },
       },
       {
         id: 'cu-3',
-        instruction: 'Bật Đèn Cồn đun Bình Nhiệt C vượt 80°C để kết tủa xanh hóa thành CuO màu đen.',
+        instruction:
+          'Bật Đèn Cồn đun Bình Nhiệt C vượt 80°C để kết tủa xanh hóa thành Copper(II) oxide (CuO) màu đen.',
         hint: 'Nhấn nút "🔥 Bật Đèn Cồn" và quan sát nhiệt độ vượt 80°C.',
         checkCondition: (vessels) => {
           const v3 = vessels.find((v) => v.isHeatable);
@@ -1197,35 +1488,66 @@ export const GUIDED_LESSONS: GuidedLesson[] = [
     quiz: [
       {
         id: 'cu-q1',
-        question: 'Chất rắn màu đen thu được sau khi đun nóng Cu(OH)₂ trên 80°C là chất gì?',
-        options: ['CuSO₄ khan', 'Đồng kim loại (Cu)', 'Đồng(II) oxit (CuO)', 'Than hoạt tính'],
+        question:
+          'Chất rắn màu đen thu được sau khi đun nóng kết tủa xanh Copper(II) hydroxide — Cu(OH)₂ trên 80°C là chất gì?',
+        options: [
+          'CuSO₄ khan',
+          'Copper kim loại (Cu)',
+          'Copper(II) oxide — Đồng(II) oxit (CuO)',
+          'Than hoạt tính',
+        ],
         correctIndex: 2,
-        explanation: 'Cu(OH)₂ kém bền nhiệt, phân hủy ở > 80°C tạo CuO màu đen và hơi nước.',
+        explanation:
+          'Cu(OH)₂ là base không tan kém bền nhiệt, phân hủy ở > 80°C tạo Copper(II) oxide (CuO) màu đen và hơi nước.',
+      },
+      {
+        id: 'cu-q2',
+        question:
+          'Trong quá trình đun nóng ống nghiệm hoặc bình thủy tinh trên đèn cồn, thao tác nào sau đây gây nguy hiểm nổ vỡ bình?',
+        options: [
+          'Đun ở mức lửa vừa khi trong bình còn dung dịch',
+          'Đun cạn khô bình thủy tinh rỗng ở mức lửa cực đại vượt 255°C',
+          'Tắt đèn cồn ngay khi phản ứng hoàn tất',
+          'Giữ khoảng cách an toàn khi quan sát',
+        ],
+        correctIndex: 1,
+        explanation:
+          'Đun khô bình thủy tinh ở nhiệt độ quá cao gây giãn nở nhiệt đột ngột làm nứt vỡ bình và cháy lan cồn.',
       },
     ],
   },
   {
     id: 'LES_SAFETY_DILUTION_9',
     grade: 'Lớp 9',
-    title: 'Bài 3: Quy tắc Vàng Pha loãng H₂SO₄ Đặc & Diễn tập Phòng Cháy Nổ',
+    orderInGrade: 3,
+    chapterTitle: 'Chương 3 • Quy tắc An toàn Pha loãng Acid Đặc & Xử lý Cháy nổ',
+    title: 'Chặng 3: Quy tắc Vàng Pha loãng Sulfuric Acid Đặc 98% & Phòng Cháy Nổ',
     summary:
-      'Thực hành pha loãng đúng chuẩn H₂SO₄ đặc 98% bằng cách rót từ từ axit vào cốc nước. (Nếu làm ngược lại sẽ nổ vỡ cốc và phải chạy đi lấy Bình Chữa Cháy CO₂!).',
-    theoryPoints: [
-      'QUY TẮC SỐNG CÒN: Muốn pha loãng axit H₂SO₄ đặc, ta PHẢI rót từ từ axit đặc vào cốc đựng sẵn nước, tuyệt đối KHÔNG rót nước vào axit đặc!',
-      'Nếu lỡ gây cháy nổ bàn thí nghiệm (do đổ nước vào H₂SO₄ đặc hoặc thả quá nhiều Natri vào nước), bạn chỉ có 25 giây để chạy sang tường bên phải giật Bình Chữa Cháy CO₂ và xịt dập lửa!',
+      'Thực hành pha loãng đúng chuẩn Sulfuric acid đặc 98% (Axit sunfuric đặc • H₂SO₄) bằng cách rót từ từ acid vào cốc nước. (Nếu làm ngược lại sẽ nổ vỡ cốc và phải chạy đi lấy Bình Chữa Cháy CO₂!).',
+    keyEquations: [
+      'H₂SO₄ (đặc 98%, 18M) + nH₂O (nhiều nước) → H₂SO₄·nH₂O (Tỏa nhiệt mạnh ΔH ≪ 0)',
     ],
-    safetyWarning: 'Hãy chuẩn bị sẵn tinh thần biết vị trí Giá Treo Bình Chữa Cháy CO₂ màu đỏ ở bức tường bên phải!',
+    theoryPoints: [
+      'QUY TẮC SỐNG CÒN: Muốn pha loãng Sulfuric acid đặc (H₂SO₄ 98%), ta PHẢI rót từ từ từng tia nhỏ acid đặc vào cốc đã đựng sẵn nhiều nước và khuấy đều; tuyệt đối KHÔNG rót nước vào acid đặc!',
+      'Nếu lỡ gây cháy nổ bàn thí nghiệm (do đổ nước vào H₂SO₄ đặc hoặc thả quá nhiều Sodium kim loại vào nước), bạn chỉ có 25 giây để chạy sang tường bên phải giật Bình Chữa Cháy CO₂ và xịt dập lửa!',
+    ],
+    safetyWarning:
+      'Hãy chuẩn bị sẵn tinh thần biết vị trí Giá Treo Bình Chữa Cháy CO₂ màu đỏ ở bức tường bên phải!',
+    xpReward: 200,
     recommendedReagents: ['H2O', 'H2SO4_dac', 'BaCl2'],
     steps: [
       {
         id: 'safe-1',
-        instruction: 'Rót trước ít nhất 50 ml Nước cất (H₂O) vào Cốc B để làm môi trường tản nhiệt.',
+        instruction:
+          'Rót trước ít nhất 50 ml Nước cất (Water • H₂O) vào Cốc B để làm môi trường tản nhiệt.',
         hint: 'Cầm H₂O (có sẵn ở ô số 1 hoặc lấy tại Bồn Rửa) rót +50 ml vào Cốc B.',
-        checkCondition: (vessels) => vessels.some((v) => v.volumeMl >= 45 && (v.moles['H2SO4_dac'] || 0) === 0),
+        checkCondition: (vessels) =>
+          vessels.some((v) => v.volumeMl >= 45 && (v.moles['H2SO4_dac'] || 0) === 0),
       },
       {
         id: 'safe-2',
-        instruction: 'Đi ra Tủ Hóa Chất lấy H₂SO₄ ĐẶC 98%, quay lại rót từ từ (+15 ml) vào cốc ĐÃ CÓ NƯỚC để pha loãng an toàn!',
+        instruction:
+          'Đi ra Tủ Hóa Chất lấy H₂SO₄ ĐẶC 98%, quay lại rót từ từ (+15 ml) vào cốc ĐÃ CÓ NƯỚC để pha loãng an toàn!',
         hint: 'Đảm bảo cốc đã có ≥ 45 ml nước rồi mới bấm +15 ml H₂SO₄ đặc (nhiệt độ tăng nhưng không nổ!).',
         checkCondition: (vessels) =>
           vessels.some((v) => (v.moles['H2SO4'] || 0) >= 0.1 && !v.visual.isBroken),
@@ -1234,16 +1556,33 @@ export const GUIDED_LESSONS: GuidedLesson[] = [
     quiz: [
       {
         id: 'safe-q1',
-        question: 'Điều gì xảy ra nếu học sinh rót trực tiếp nước vào cốc đang đựng H₂SO₄ đặc 98%?',
+        question:
+          'Điều gì xảy ra nếu học sinh rót trực tiếp nước (H₂O) vào cốc đang đựng Sulfuric acid đặc 98% (H₂SO₄ đặc)?',
         options: [
           'Không có hiện tượng gì xảy ra',
-          'Nước nổi trên mặt axit đặc, sôi bùng mãnh liệt gây nổ bắn axit và cháy nguy hiểm',
+          'Nước nhẹ hơn nổi trên mặt acid đặc, sôi bùng mãnh liệt gây nổ bắn acid và cháy nguy hiểm',
           'Dung dịch đóng băng lạnh giá',
           'Tạo kết tủa màu xanh lam',
         ],
         correctIndex: 1,
-        explanation: 'Quá trình hòa tan H₂SO₄ đặc tỏa nhiệt cực lớn; nước nhẹ hơn nổi ở trên sôi tức thời làm bắn tung axit đặc.',
+        explanation:
+          'Quá trình hydrat hóa H₂SO₄ đặc tỏa nhiệt cực lớn; nước nhẹ hơn (D = 1 g/cm³ < 1.84 g/cm³) nổi ở trên sôi tức thời làm bắn tung acid đặc.',
+      },
+      {
+        id: 'safe-q2',
+        question:
+          'Khi xảy ra sự cố cháy hóa chất trên bàn thí nghiệm, quy trình xử lý khẩn cấp nào là đúng nhất?',
+        options: [
+          'Đứng yên chờ lửa tự tắt',
+          'Lập tức lấy Bình chữa cháy khí CO₂ nén lạnh phun bao phủ dập tắt ngọn lửa và ngắt nguồn nhiệt',
+          'Đổ thêm cồn hoặc hóa chất dễ cháy vào đám lửa',
+          'Cất bình chữa cháy vào tủ khóa kín',
+        ],
+        correctIndex: 1,
+        explanation:
+          'Khí tuyết lạnh CO₂ làm ngạt nguồn cung cấp Oxygen và hạ nhiệt vùng cháy nhanh chóng mà không gây phản ứng phụ với kim loại kiềm hay acid đặc.',
       },
     ],
   },
 ];
+
