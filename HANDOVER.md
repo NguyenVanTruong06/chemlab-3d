@@ -48,20 +48,22 @@ chemlab-3d/
 │   └── sync_data.py           <-- Script đồng bộ dữ liệu Sheets/CSV sang JSON
 └── src/
     ├── main.tsx
-    ├── App.tsx
-    ├── App.css
+    ├── App.tsx                <-- App chính (Chế độ Bài học, Sandbox, Góc nhìn 3D, Vòng lặp mô phỏng)
+    ├── App.css                <-- Giao diện Phòng Lab phản hồi Desktop & Mobile
+    ├── types/
+    │   └── chemistry.ts       <-- Kiểu dữ liệu cho Bình chứa, Hóa chất, Góc nhìn, Bài học
     ├── data/
-    │   ├── chemicals.json     <-- 12 Hóa chất THCS mẫu
-    │   ├── reactions.json     <-- 8 Phản ứng THCS đặc trưng
-    │   └── lessons.json       <-- 4 Bài học Lớp 8 - 9 chuẩn GDPT
-    ├── components/            <-- UI Components (HUD, Toolbar, Quiz)
-    ├── engine/                <-- Real-time Chemical State Engine
-    │   ├── ChemicalContainer.ts
-    │   └── ReactionSolver.ts
-    └── scene/                 <-- Three.js 3D Room, Lab Bench, Apparatus
-        ├── LabRoom.tsx
-        ├── Workbench.tsx
-        └── CameraController.tsx
+    │   ├── chemicals.json     <-- Dữ liệu Hóa chất THCS đồng bộ từ Sheets
+    │   ├── reactions.json     <-- Dữ liệu Phản ứng THCS đồng bộ từ Sheets
+    │   └── lessons.json       <-- Dữ liệu Bài học Lớp 8 - 9 đồng bộ từ Sheets
+    ├── components/
+    │   ├── LabCanvas.tsx      <-- Cầu nối React ↔ Three.js WebGL
+    │   ├── CurriculumPanel.tsx<-- Khung bài học 3 bước (Lý thuyết - Thực hành tự chấm - Kiểm tra)
+    │   └── WorkbenchControls.tsx <-- Bảng thao tác hóa chất, rót cốc, đèn cồn & đo số mol/pH/nhiệt độ
+    ├── engine/
+    │   └── ChemistryEngine.ts <-- Bộ máy Hóa học thời gian thực (Mol, C_M, pH, Nhiệt độ, Đổ dư kết tủa tan)
+    └── scene/
+        └── LabScene3D.ts      <-- Không gian Phòng Lab 3D (Đi lại WASD, Kệ thuốc thử, Tủ hút, Bàn Lab, Hạt)
 ```
 
 ---
@@ -84,11 +86,15 @@ npm run dev
 
 ## 📋 5. Trạng Thái Hiện Tại & Bước Tiếp Theo
 
-- [x] **Phiên 1:** Thống nhất ý tưởng, phạm vi (THCS Lớp 8-9 + Real-time engine + 3D Space).
-- [x] **Khởi tạo PRD trên Google Docs:** Đã xuất bản vào thư mục `App - Web ( STUDY )`.
-- [x] **Khởi tạo Cơ sở dữ liệu trên Google Sheets:** Đã xuất bản 4 tab dữ liệu chuẩn hóa vào `App - Web ( STUDY )`.
-- [x] **Khởi tạo GitHub Repo:** Đã tạo repo `chemlab-3d`, scaffold Vite + React + Three.js, sync JSON data.
-- [ ] **Bước tiếp theo (Phiên 2):**
-  1. Lập trình module `ChemicalState` và `ReactionSolver` (tính số mol, nồng độ mol, pH, nhiệt độ, kết tủa).
-  2. Dựng căn phòng Lab 3D với Three.js (Sàn, Tường, Kệ hóa chất, Bàn thí nghiệm, Đèn chiếu sáng, Điều khiển góc nhìn).
-  3. Xây dựng bản chạy thử nghiệm đầu tiên (Interactive 3D Prototype) để người dùng thao tác rót dung dịch và xem phản ứng trực tiếp.
+- [x] **Phiên 1 — Khởi tạo Hệ sinh thái Đám mây:**
+  - Xuất bản PRD trên Google Docs & Kho dữ liệu 4 tab trên Google Sheets (`App - Web ( STUDY )`).
+  - Khởi tạo GitHub Repo `chemlab-3d`, tích hợp sẵn bộ **87+ Skills** trong `.agents/skills/`.
+- [x] **Giai đoạn 1 & 2 — Căn phòng Lab 3D & Bộ máy Hóa học Thời gian thực (MVP v1.0):**
+  - Dựng hoàn chỉnh căn phòng Lab 3D với Three.js: Tường, Cửa sổ ánh sáng tự nhiên, Bảng tuần hoàn, Nội quy an toàn, Tủ hóa chất 3D (click chọn trực tiếp), Tủ hút khí độc, Bồn rửa, Bàn thí nghiệm trung tâm, 3 bình thủy tinh, Đèn cồn & Kiềng đun.
+  - Hỗ trợ 3 chế độ góc nhìn: **Bàn Lab cận cảnh**, **Đi lại tự do trong phòng (`WASD` + D-pad cảm ứng trên điện thoại)**, và **Toàn cảnh 360°**.
+  - Hoàn thiện `ChemistryEngine.ts` tính toán theo thời gian thực: thể tích (`ml`), số mol (`mol`), nồng độ (`C_M`), độ `pH`, nhiệt độ đun nóng (`°C`), kết tủa lưỡng tính (`AlCl3 + NaOH` dư tan kết tủa), nhiệt phân (`Cu(OH)2 > 80°C -> CuO đen`, `KMnO4 > 200°C -> O2`), và cảnh báo nổ kim loại kiềm `Na`.
+  - Tích hợp 4 Bài học Lớp 8 - 9 tự động chấm từng bước thực hành + câu hỏi trắc nghiệm.
+- [ ] **Bước tiếp theo (Giai đoạn 3):**
+  1. Bổ sung âm thanh sống động (tiếng rót nước, tiếng sủi bọt khí `H2`/`CO2`, tiếng sôi, cảnh báo an toàn) bằng Web Audio API.
+  2. Mở rộng danh mục hóa chất & bài học Lớp 8 - 9 từ Google Sheets của bạn Sư phạm (thêm muối Sắt `FeCl2`/`FeCl3`, `AgNO3`, dẫn ống khí sục `CO2` vào nước vôi trong `Ca(OH)2`).
+  3. Triển khai tự động (Auto-deploy) lên GitHub Pages / Vercel để gửi link trực tiếp cho học sinh dùng thử.
