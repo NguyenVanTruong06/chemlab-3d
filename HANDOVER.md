@@ -34,6 +34,11 @@
 ```text
 chemlab-3d/
 ├── .gitignore
+├── .agents/skills/            <-- TOÀN BỘ 87+ SKILLS (Mở trên điện thoại là có ngay)
+├── .agent/                    <-- Symlink tương thích
+├── docs/
+│   ├── PRD_ChemLab_3D.md      <-- Bản PRD tải từ Google Docs về
+│   └── data_backup/           <-- Dữ liệu hóa học THCS dạng CSV
 ├── HANDOVER.md                <-- File này (Lưu trạng thái phiên)
 ├── README.md                  <-- Giới thiệu dự án & Hướng dẫn cài đặt
 ├── package.json

@@ -1,0 +1,13 @@
+ID,Tên hóa chất (Tiếng Việt),Công thức,Phân loại,Trạng thái (25°C),Nồng độ chuẩn,Màu sắc thực tế,Mã Hex màu 3D,Khối lượng mol M (g/mol),Độ pH mẫu,Cảnh báo an toàn & Lưu ý
+CHEM_01,Axit clohiđric,HCl,Axit vô cơ,Dung dịch,1.0 M,Không màu trong suốt,#E0F2FE22,36.5,1.0,"Ăn mòn mạnh, tránh tiếp xúc trực tiếp da/mắt"
+CHEM_02,Axit sunfuric loãng,H2SO4,Axit vô cơ,Dung dịch,1.0 M,Không màu trong suốt,#E0F2FE22,98.0,0.5,"Tỏa nhiệt khi hòa tan, tính axit mạnh"
+CHEM_03,Natri hiđroxit,NaOH,Bazơ kiềm,Dung dịch,1.0 M,Không màu trong suốt,#FFFFFF11,40.0,14.0,"Ăn mòn da, làm trơn nhờn da tay"
+CHEM_04,Bari clorua,BaCl2,Muối,Dung dịch,0.5 M,Không màu trong suốt,#FFFFFF11,208.2,7.0,"Độc, dùng để nhận biết ion sunfat (SO4 2-)"
+CHEM_05,Đồng(II) sunfat,CuSO4,Muối,Dung dịch,0.5 M,Xanh lam đặc trưng,#1E88E5DD,159.6,4.5,Độc với sinh vật thủy sinh
+CHEM_06,Nhôm kim loại,Al,Kim loại,Chất rắn (Lá/Miếng),Rắn nguyên chất,Ánh kim bạc sáng,#D1D5DBFF,27.0,N/A,Tan trong cả axit và bazơ mạnh
+CHEM_07,Natri kim loại,Na,Kim loại kiềm,Chất rắn (Mẩu nhỏ),Rắn nguyên chất,Trắng bạc mềm,#E5E7EBFF,23.0,N/A,"NGUY HIỂM: Phản ứng mãnh liệt với nước, tự bốc cháy"
+CHEM_08,Canxi cacbonat,CaCO3,Muối,Chất rắn (Bột/Đá vôi),Rắn nguyên chất,Màu trắng đục,#F3F4F6FF,100.1,N/A,"Không tan trong nước, tan sủi bọt trong axit"
+CHEM_09,Kali pemanganat,KMnO4,Muối oxi hóa,Chất rắn (Tinh thể),Rắn nguyên chất,Tím đen ánh kim,#4A148CFF,158.0,N/A,"Chất oxi hóa mạnh, dùng điều chế O2 khi đun nóng"
+CHEM_10,Dung dịch Phenolphtalein,Phenolphtalein,Chỉ thị màu,Dung dịch (Cồn),1% trong cồn,Không màu,#FFFFFF00,318.3,N/A,"Hóa hồng cánh sen trong môi trường bazơ (pH > 8.3)"
+CHEM_11,Dung dịch Quỳ tím,QuyTim,Chỉ thị màu,Dung dịch,Dung dịch nước,Tím nhạt,#9C27B0AA,N/A,7.0,"Hóa đỏ khi gặp Axit (pH < 5), hóa xanh khi gặp Bazơ (pH > 8.3)"
+CHEM_12,Nước cất,H2O,Dung môi,Chất lỏng,Nguyên chất,Không màu trong suốt,#E0F2FE33,18.0,7.0,Dung môi hòa tan tiêu chuẩn
