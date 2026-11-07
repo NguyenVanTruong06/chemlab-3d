@@ -10,6 +10,7 @@
 
 | Tài nguyên | Nền tảng | Đường dẫn liên kết | Mô tả |
 | :--- | :--- | :--- | :--- |
+| **Web App Live** | **GitHub Pages** | [nguyenvantruong06.github.io/chemlab-3d](https://nguyenvantruong06.github.io/chemlab-3d/) | Bản chạy thực tế công khai (Mở trên PC & Điện thoại) |
 | **Source Code** | **GitHub** | [NguyenVanTruong06/chemlab-3d](https://github.com/NguyenVanTruong06/chemlab-3d) | Kho mã nguồn chính thức (React + Three.js) |
 | **Tài liệu PRD** | **Google Docs** | [01. [PRD] ChemLab 3D Spec](https://docs.google.com/document/d/1Evfu-t0SZyucjOfgeXoJeBzEpOqkc0qpMXkli6WrphU/edit) | Tài liệu đặc tả kiến trúc, đồ họa 3D & lộ trình |
 | **Kho Dữ Liệu** | **Google Sheets** | [02. [DATA] ChemLab 3D Database](https://docs.google.com/spreadsheets/d/1CdPqaPGGu83QvpskbboIhmOoZg5pYqUep06nBhJtLZk/edit) | 4 Tab: Hóa chất, Phản ứng, Bài học, Hướng dẫn Sư phạm |
