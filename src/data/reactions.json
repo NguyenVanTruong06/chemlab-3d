@@ -1,0 +1,82 @@
+[
+  {
+    "Mã phản ứng": "RXN_01",
+    "Tên phản ứng / Thí nghiệm": "Trung hòa Axit - Bazơ (HCl + NaOH)",
+    "Chất phản ứng tham gia": "HCl + NaOH",
+    "Tỉ lệ mol (Cân bằng)": "1 : 1",
+    "Sản phẩm tạo thành": "NaCl + H2O",
+    "Điều kiện nhiệt độ / Áp suất": "Nhiệt độ phòng (25°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Có Phenolphtalein: Màu hồng của NaOH nhạt dần và mất màu hoàn toàn khi vừa đủ.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Tỏa nhiệt nhẹ. Nếu tiếp tục nhỏ dư HCl, dung dịch vẫn không màu."
+  },
+  {
+    "Mã phản ứng": "RXN_02",
+    "Tên phản ứng / Thí nghiệm": "Nhận biết Axit Sunfuric bằng muối Bari (BaCl2 + H2SO4)",
+    "Chất phản ứng tham gia": "BaCl2 + H2SO4",
+    "Tỉ lệ mol (Cân bằng)": "1 : 1",
+    "Sản phẩm tạo thành": "BaSO4 (kết tủa) + 2HCl",
+    "Điều kiện nhiệt độ / Áp suất": "Nhiệt độ phòng (25°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Xuất hiện kết tủa trắng đục lắng dần xuống đáy ống nghiệm.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Kết tủa BaSO4 trơ bền, không tan trong axit dư."
+  },
+  {
+    "Mã phản ứng": "RXN_03",
+    "Tên phản ứng / Thí nghiệm": "Tác dụng của Bazơ với Muối đồng (CuSO4 + NaOH)",
+    "Chất phản ứng tham gia": "CuSO4 + 2NaOH",
+    "Tỉ lệ mol (Cân bằng)": "1 : 2",
+    "Sản phẩm tạo thành": "Cu(OH)2 (kết tủa) + Na2SO4",
+    "Điều kiện nhiệt độ / Áp suất": "Nhiệt độ phòng (25°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Xuất hiện kết tủa keo màu xanh lam đặc trưng của Cu(OH)2.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Nếu đun nóng trên 80°C, kết tủa xanh chuyển thành chất rắn màu đen (CuO)."
+  },
+  {
+    "Mã phản ứng": "RXN_04",
+    "Tên phản ứng / Thí nghiệm": "Nhiệt phân phân hủy Đồng(II) hiđroxit (Cu(OH)2 t°)",
+    "Chất phản ứng tham gia": "Cu(OH)2",
+    "Tỉ lệ mol (Cân bằng)": "1",
+    "Sản phẩm tạo thành": "CuO + H2O",
+    "Điều kiện nhiệt độ / Áp suất": "Đun nóng trên đèn cồn (t° > 80°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Kết tủa xanh lam chuyển dần sang màu đen của CuO, có hơi nước đọng trên thành ống nghiệm.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Chỉ xảy ra khi bật đèn cồn và giữ ống nghiệm đủ nhiệt độ."
+  },
+  {
+    "Mã phản ứng": "RXN_05",
+    "Tên phản ứng / Thí nghiệm": "Axit tác dụng với Kim loại (Al + HCl)",
+    "Chất phản ứng tham gia": "2Al + 6HCl",
+    "Tỉ lệ mol (Cân bằng)": "2 : 6",
+    "Sản phẩm tạo thành": "2AlCl3 + 3H2 (khí)",
+    "Điều kiện nhiệt độ / Áp suất": "Nhiệt độ phòng (25°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Miếng nhôm tan dần, sủi bọt khí H2 không màu liên tục thoát lên.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Phản ứng tỏa nhiệt mạnh, tốc độ bọt khí tăng khi nhiệt độ tăng."
+  },
+  {
+    "Mã phản ứng": "RXN_06",
+    "Tên phản ứng / Thí nghiệm": "Kim loại kiềm tác dụng với nước (Na + H2O)",
+    "Chất phản ứng tham gia": "2Na + 2H2O",
+    "Tỉ lệ mol (Cân bằng)": "2 : 2",
+    "Sản phẩm tạo thành": "2NaOH + H2 (khí)",
+    "Điều kiện nhiệt độ / Áp suất": "Nhiệt độ phòng (25°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Mẩu Na vo tròn chạy trên mặt nước, sủi bọt khí dữ dội, tỏa nhiệt mạnh có thể bốc cháy.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Cảnh báo nguy hiểm: nếu thả mẩu Na > 0.5g sẽ kích hoạt hiệu ứng nổ vỡ cốc ảo!"
+  },
+  {
+    "Mã phản ứng": "RXN_07",
+    "Tên phản ứng / Thí nghiệm": "Axit tác dụng với Muối cacbonat (CaCO3 + HCl)",
+    "Chất phản ứng tham gia": "CaCO3 + 2HCl",
+    "Tỉ lệ mol (Cân bằng)": "1 : 2",
+    "Sản phẩm tạo thành": "CaCl2 + CO2 (khí) + H2O",
+    "Điều kiện nhiệt độ / Áp suất": "Nhiệt độ phòng (25°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Bột/miếng đá vôi tan dần, sủi bọt khí CO2 không màu mạnh mẽ.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Nếu dẫn khí CO2 sục vào nước vôi trong Ca(OH)2 sẽ làm vẩn đục trắng."
+  },
+  {
+    "Mã phản ứng": "RXN_08",
+    "Tên phản ứng / Thí nghiệm": "Điều chế Khí Oxi bằng nhiệt phân Kali pemanganat (KMnO4 t°)",
+    "Chất phản ứng tham gia": "2KMnO4",
+    "Tỉ lệ mol (Cân bằng)": "2",
+    "Sản phẩm tạo thành": "K2MnO4 + MnO2 + O2 (khí)",
+    "Điều kiện nhiệt độ / Áp suất": "Đun nóng mạnh (t° > 200°C)",
+    "Hiện tượng quan sát trong Lab 3D": "Chất rắn màu tím đen nổ lách tách sinh khí O2. Tàn đóm đỏ đưa vào bùng cháy sáng.",
+    "Cơ chế dư chất / Biện luận đặc biệt": "Quy tắc an toàn: phải hơ đều ống nghiệm trước khi đun tập trung tại đáy."
+  }
+]
